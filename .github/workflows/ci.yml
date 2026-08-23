@@ -23,6 +23,8 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Security audit
+        run: npm audit --omit=dev --audit-level=high
       - name: Prepare database
         run: npm run db:push
       - name: Verify live Cocktaillo menu import
