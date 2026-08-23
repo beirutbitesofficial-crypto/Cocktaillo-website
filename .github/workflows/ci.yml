@@ -1,0 +1,29 @@
+name: Cocktaillo CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, build/cocktaillo-ordering-platform]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./ci.db
+      ADMIN_EMAIL: admin@cocktaillo.test
+      ADMIN_PASSWORD: ci-only-password
+      ADMIN_SECRET: ci-only-secret-key-with-more-than-32-characters
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare database
+        run: npm run db:push
+      - name: Build
+        run: npm run build
