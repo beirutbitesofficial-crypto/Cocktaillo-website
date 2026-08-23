@@ -25,5 +25,7 @@ jobs:
         run: npm install
       - name: Prepare database
         run: npm run db:push
+      - name: Verify live Cocktaillo menu import
+        run: npm run import:menu
       - name: Build
         run: npm run build
