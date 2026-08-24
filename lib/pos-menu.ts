@@ -1,4 +1,5 @@
 const DEFAULT_POS_URL = 'https://indigo-ape-952022.hostingersite.com'
+const HASH_MASK = (1n << 53n) - 1n
 
 export type PosMenuItem = {
   id: string
@@ -23,6 +24,19 @@ export type PosMenuFeed = {
   categories: PosMenuCategory[]
   items: PosMenuItem[]
 }
+
+function stableNumericId(value: string) {
+  let hash = 1469598103934665603n
+  for (const ch of value) {
+    hash ^= BigInt(ch.codePointAt(0) || 0)
+    hash = BigInt.asUintN(64, hash * 1099511628211n)
+  }
+  const id = Number(hash & HASH_MASK)
+  return id || 1
+}
+
+export const posProductId = (sourceId: string) => stableNumericId(`product:${sourceId}`)
+export const posCategoryId = (sourceId: string) => stableNumericId(`category:${sourceId}`)
 
 export function getPosBaseUrl() {
   return String(process.env.COCKTAILLO_POS_URL || DEFAULT_POS_URL).replace(/\/+$/, '')
