@@ -3,14 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 enum OrderType {
   DELIVERY
   TAKEAWAY
-  DINE_IN
 }
 
 enum OrderStatus {
@@ -30,7 +29,7 @@ enum PaymentMethod {
 model Category {
   id        Int       @id @default(autoincrement())
   name      String
-  slug      String    @unique
+  slug      String    @unique @db.VarChar(191)
   sortOrder Int       @default(0)
   active    Boolean   @default(true)
   products  Product[]
@@ -40,10 +39,10 @@ model Category {
 
 model Product {
   id          Int       @id @default(autoincrement())
-  name        String
-  description String?
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
   price       Float
-  imageUrl    String?
+  imageUrl    String?   @db.Text
   featured    Boolean   @default(false)
   active      Boolean   @default(true)
   sortOrder   Int       @default(0)
@@ -57,16 +56,15 @@ model Product {
 
 model Order {
   id               Int           @id @default(autoincrement())
-  orderNumber      String        @unique
+  orderNumber      String        @unique @db.VarChar(64)
   type             OrderType
   status           OrderStatus   @default(NEW)
-  customerName     String?
-  phone            String?
-  address          String?
-  tableNumber      String?
-  notes            String?
+  customerName     String?       @db.VarChar(255)
+  phone            String?       @db.VarChar(64)
+  address          String?       @db.Text
+  notes            String?       @db.Text
   paymentMethod    PaymentMethod
-  paymentReference String?
+  paymentReference String?       @db.VarChar(255)
   subtotal         Float
   deliveryFee      Float         @default(0)
   total            Float
@@ -81,7 +79,7 @@ model OrderItem {
   id        Int     @id @default(autoincrement())
   orderId   Int
   productId Int?
-  name      String
+  name      String  @db.VarChar(255)
   price     Float
   quantity  Int
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -89,7 +87,7 @@ model OrderItem {
 
 model Setting {
   id        Int      @id @default(autoincrement())
-  key       String   @unique
-  value     String
+  key       String   @unique @db.VarChar(191)
+  value     String   @db.Text
   updatedAt DateTime @updatedAt
 }

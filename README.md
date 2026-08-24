@@ -1,14 +1,13 @@
 # Cocktaillo Resto - Café Ordering Platform
 
-A complete restaurant ordering website and admin dashboard for Cocktaillo.
+A production-ready restaurant ordering website and admin dashboard for Cocktaillo.
 
 ## Included
 
 - Responsive Cocktaillo-branded storefront
 - Menu categories, search, product cards and cart
-- Delivery ordering (name, phone, address, notes)
-- Takeaway ordering (name, phone, notes)
-- Dine-in table ordering using `/?table=12`
+- Delivery ordering with customer name, phone, address and notes
+- Takeaway ordering with customer name, phone and notes
 - Cash payment
 - Whish Money payment with editable Whish phone number
 - Order totals and configurable delivery fee
@@ -19,37 +18,50 @@ A complete restaurant ordering website and admin dashboard for Cocktaillo.
 - Product availability and featured items
 - Restaurant settings
 - Editable Instagram, Facebook, TikTok and location links
-- One-click Al Qaima menu import from `https://alqaima.com/menu/cocktaillo-resto-cafe/en`
-- Prisma + SQLite persistence suitable for a persistent Node.js/Hostinger server
+- Automatic first-start Cocktaillo menu import from `https://alqaima.com/menu/cocktaillo-resto-cafe/en`
+- Admin one-click Al Qaima menu re-import
+- Prisma + MySQL persistence for production deployment on Hostinger
 
-## Setup
+## Local / server setup
 
-1. Copy `.env.example` to `.env`.
-2. Change `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and especially `ADMIN_SECRET`.
-3. Install dependencies: `npm install`.
-4. Create database: `npm run db:push`.
-5. Seed defaults: `npm run db:seed`.
-6. Run: `npm run dev`.
-7. Open `/admin/login` and sign in.
-8. Go to **Menu → Import from Al Qaima** to import the current Cocktaillo menu.
-9. Go to **Settings** to enter the Whish phone number, delivery fee, contact details and social links.
+1. Create a MySQL database.
+2. Copy `.env.example` to `.env`.
+3. Set `DATABASE_URL` to the MySQL connection string.
+4. Change `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and especially `ADMIN_SECRET`.
+5. Install dependencies: `npm install`.
+6. Create/update the database schema: `npm run db:push`.
+7. Seed restaurant settings and the current Cocktaillo menu: `npm run db:seed`.
+8. Run locally with `npm run dev` or production with `npm start`.
+9. Open `/admin/login` and sign in.
+10. Go to **Settings** to enter the Whish phone number, delivery fee, contact details and social links.
 
 ## Production / Hostinger
 
-Use Node.js 20+ and a persistent application directory. `npm start` automatically runs `prisma db push`, seeds only missing defaults/sample data, then starts Next.js.
+Use Node.js 22+ and a Hostinger MySQL database. The database is external to the application build, so orders, menu settings and customer order data remain persistent across app redeployments.
+
+`npm start` runs `prisma db push`, seeds missing defaults/menu data, and then starts Next.js.
 
 Recommended environment variables:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="mysql://DB_USER:DB_PASSWORD@DB_HOST:3306/DB_NAME"
 ADMIN_EMAIL="your-admin-email"
 ADMIN_PASSWORD="use-a-strong-password"
 ADMIN_SECRET="use-a-long-random-secret-at-least-32-characters"
 NEXT_PUBLIC_SITE_URL="https://your-domain.com"
 ```
 
-For table ordering, encode links such as `https://your-domain.com/?table=1`, `?table=2`, etc. into QR codes and place one QR on each table. The checkout automatically switches to **Dine In** and pre-fills the table number.
+If the MySQL password contains reserved URL characters such as `@`, `:`, `/`, `?`, `#` or `%`, URL-encode the password before placing it in `DATABASE_URL`.
 
-## Notes
+## Order methods
 
-Whish is implemented as a manual transfer flow: the customer sees the Whish number configured by the admin and may enter a transfer reference/sender name. This does not claim an unsupported direct Whish payment API integration.
+The website accepts only:
+
+- `DELIVERY`
+- `TAKEAWAY`
+
+Dine-in/table ordering has intentionally been removed.
+
+## Whish payment
+
+Whish is implemented as a manual transfer flow. The customer sees the Whish number configured by the admin and may enter a transfer reference/sender name. The restaurant should verify receipt of the transfer before treating it as confirmed payment.

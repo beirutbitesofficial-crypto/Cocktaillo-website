@@ -3,13 +3,26 @@ name: Cocktaillo CI
 on:
   pull_request:
   push:
-    branches: [main, build/cocktaillo-ordering-platform]
+    branches: [main, improve/auto-menu-import]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: cocktaillo_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     env:
-      DATABASE_URL: file:./ci.db
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/cocktaillo_ci
       ADMIN_EMAIL: admin@cocktaillo.test
       ADMIN_PASSWORD: ci-only-password
       ADMIN_SECRET: ci-only-secret-key-with-more-than-32-characters
@@ -20,10 +33,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Prepare database
+      - name: Security audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Prepare MySQL database
         run: npm run db:push
+      - name: Seed Cocktaillo menu
+        run: npm run db:seed
       - name: Build
         run: npm run build

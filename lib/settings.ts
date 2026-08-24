@@ -10,7 +10,6 @@ export const defaultSettings: Record<string, string> = {
   cashEnabled: 'true',
   deliveryEnabled: 'true',
   takeawayEnabled: 'true',
-  dineInEnabled: 'true',
   deliveryFee: '0',
   instagram: '',
   facebook: '',
