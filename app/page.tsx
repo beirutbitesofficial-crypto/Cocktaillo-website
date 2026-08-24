@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
-import { getPosMenu } from '@/lib/pos-menu'
+import { getPosMenu, posCategoryId, posProductId } from '@/lib/pos-menu'
 import Storefront from '@/components/Storefront'
 
 export const dynamic = 'force-dynamic'
@@ -16,13 +16,13 @@ export default async function Home() {
 
   const byName = new Map(metadata.map(p => [key(p.name), p]))
   const categories = posMenu.categories.map(category => ({
-    id: category.id,
+    id: posCategoryId(category.id),
     name: category.name,
     slug: category.id,
     products: category.products.map(product => {
       const meta = byName.get(key(product.name))
       return {
-        id: product.id,
+        id: posProductId(product.id),
         name: product.name,
         description: meta?.description || null,
         price: product.price,
