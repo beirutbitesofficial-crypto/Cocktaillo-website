@@ -8,6 +8,7 @@
     "start": "prisma db push && npm run db:seed && next start",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "prisma db push && npm run db:seed",
     "import:menu": "tsx scripts/import-alqaima.ts"
   },
   "dependencies": {
