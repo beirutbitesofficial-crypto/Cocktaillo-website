@@ -10,24 +10,56 @@ const money = (text: string) => {
 
 function walkJson(value: unknown, out: ImportedItem[]) {
   if (!value || typeof value !== 'object') return
-  if (Array.isArray(value)) { value.forEach(v => walkJson(v, out)); return }
+  if (Array.isArray(value)) {
+    value.forEach(v => walkJson(v, out))
+    return
+  }
+
   const obj = value as Record<string, unknown>
   const name = typeof obj.name === 'string' ? clean(obj.name) : ''
   const priceRaw = obj.price ?? obj.priceUSD ?? obj.price_usd
-  const p = typeof priceRaw === 'number' ? priceRaw : typeof priceRaw === 'string' ? Number(priceRaw.replace(/[^0-9.]/g, '')) : NaN
+  const p = typeof priceRaw === 'number'
+    ? priceRaw
+    : typeof priceRaw === 'string'
+      ? Number(priceRaw.replace(/[^0-9.]/g, ''))
+      : NaN
+
   if (name && Number.isFinite(p) && p >= 0) {
     const categoryObj = obj.category as Record<string, unknown> | string | undefined
-    const category = typeof categoryObj === 'string' ? clean(categoryObj) : categoryObj && typeof categoryObj.name === 'string' ? clean(categoryObj.name as string) : 'Menu'
+    const category = typeof categoryObj === 'string'
+      ? clean(categoryObj)
+      : categoryObj && typeof categoryObj.name === 'string'
+        ? clean(categoryObj.name as string)
+        : 'Menu'
     const desc = typeof obj.description === 'string' ? clean(obj.description) : undefined
-    const img = typeof obj.image === 'string' ? obj.image : typeof obj.imageUrl === 'string' ? obj.imageUrl : undefined
+    const img = typeof obj.image === 'string'
+      ? obj.image
+      : typeof obj.imageUrl === 'string'
+        ? obj.imageUrl
+        : undefined
     out.push({ name, description: desc, price: p, imageUrl: img, category })
   }
+
   Object.values(obj).forEach(v => walkJson(v, out))
 }
 
 export async function fetchAlqaimaMenu(url: string): Promise<ImportedItem[]> {
-  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 CocktailloMenuImporter/1.0' }, cache: 'no-store' })
+  const res = await fetch(url, {
+    headers: {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'accept-language': 'en-US,en;q=0.9',
+      'cache-control': 'no-cache',
+      'pragma': 'no-cache',
+      'referer': 'https://alqaima.com/',
+      'upgrade-insecure-requests': '1'
+    },
+    cache: 'no-store',
+    redirect: 'follow'
+  })
+
   if (!res.ok) throw new Error(`Menu source returned ${res.status}`)
+
   const html = await res.text()
   const $ = cheerio.load(html)
   const items: ImportedItem[] = []
@@ -48,6 +80,7 @@ export async function fetchAlqaimaMenu(url: string): Promise<ImportedItem[]> {
       if (/\$\s*[0-9]/.test(t) || /Category\s*:/i.test(t) || /Add to Cart|\bAdd\b/i.test(t)) break
       container = container.parent()
     }
+
     const text = clean(container.text())
     const price = money(text)
     if (price === null) return
@@ -63,7 +96,10 @@ export async function fetchAlqaimaMenu(url: string): Promise<ImportedItem[]> {
   const dedup = new Map<string, ImportedItem>()
   for (const item of items) {
     const key = item.name.toLowerCase()
-    if (!dedup.has(key) || (dedup.get(key)?.category === 'Menu' && item.category !== 'Menu')) dedup.set(key, item)
+    if (!dedup.has(key) || (dedup.get(key)?.category === 'Menu' && item.category !== 'Menu')) {
+      dedup.set(key, item)
+    }
   }
+
   return [...dedup.values()].filter(i => i.name.length < 120)
 }
