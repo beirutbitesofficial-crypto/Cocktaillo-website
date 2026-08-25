@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Delivery address is required' }, { status: 400 })
     }
 
-    let posMenu
+    let posMenu: Awaited<ReturnType<typeof getPosMenu>>
     try {
       posMenu = await getPosMenu()
     } catch (error) {
@@ -54,12 +54,17 @@ export async function POST(req: Request) {
       if (existing && existing.id !== product.id) throw new Error('POS menu id collision')
       productMap.set(id, product)
     }
-    const addonMap = new Map(posMenu.addons.map(addon => [addon.id, addon]))
+    const addonMap = new Map<string, (typeof posMenu.addons)[number]>(posMenu.addons.map(addon => [addon.id, addon]))
+    type PosAddon = (typeof posMenu.addons)[number]
 
     const validItems = items.map((i: any) => {
       const product = productMap.get(Number(i.productId))
-      const requestedAddonIds = [...new Set(Array.isArray(i.addons) ? i.addons.map((id: unknown) => String(id)) : [])]
-      const selectedAddons = requestedAddonIds.map(id => addonMap.get(id)).filter(Boolean) as (typeof posMenu.addons)[number][]
+      const requestedAddonIds: string[] = Array.from(new Set<string>(
+        Array.isArray(i.addons) ? i.addons.map((id: unknown) => String(id)) : []
+      ))
+      const selectedAddons = requestedAddonIds
+        .map((id: string) => addonMap.get(id))
+        .filter((addon: PosAddon | undefined): addon is PosAddon => Boolean(addon))
       const addonsValid = requestedAddonIds.length === selectedAddons.length && (!requestedAddonIds.length || Boolean(product?.allow_addons))
       return {
         product,
