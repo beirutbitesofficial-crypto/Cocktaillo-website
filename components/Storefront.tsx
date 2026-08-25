@@ -3,21 +3,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Instagram, Facebook, MapPin, Minus, Plus, Search, ShoppingBag, X, CheckCircle2, Bike, PackageCheck, CreditCard, Banknote, Phone } from 'lucide-react'
 
-type Product = { id: number; name: string; description: string | null; price: number; imageUrl: string | null; featured: boolean }
+type Addon = { id: string; name: string; nameAr: string; priceLbp: number; price: number }
+type Product = { id: number; name: string; description: string | null; price: number; imageUrl: string | null; featured: boolean; allowAddons: boolean }
 type Category = { id: number; name: string; slug: string; products: Product[] }
-type Props = { categories: Category[]; settings: Record<string, string> }
-type CartItem = Product & { quantity: number }
+type Props = { categories: Category[]; settings: Record<string, string>; addons: Addon[]; exchangeRate: number }
+type CartItem = Product & { quantity: number; addons: Addon[]; cartKey: string }
 type OrderType = 'DELIVERY' | 'TAKEAWAY'
 type Payment = 'CASH' | 'WHISH'
 
 const money = (n: number) => `$${n.toFixed(2)}`
+const lbp = (n: number) => `${Math.round(n).toLocaleString('en-US')} LBP`
+const makeCartKey = (productId: number, selected: Addon[]) => `${productId}:${selected.map(a => a.id).sort().join(',')}`
+const addonTotal = (item: Pick<CartItem, 'addons'>) => item.addons.reduce((n, addon) => n + addon.price, 0)
 
-export default function Storefront({ categories, settings }: Props) {
+export default function Storefront({ categories, settings, addons, exchangeRate }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [category, setCategory] = useState('all')
   const [query, setQuery] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [customizing, setCustomizing] = useState<Product | null>(null)
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([])
   const [orderType, setOrderType] = useState<OrderType>('TAKEAWAY')
   const [payment, setPayment] = useState<Payment>('CASH')
   const [submitting, setSubmitting] = useState(false)
@@ -26,7 +32,20 @@ export default function Storefront({ categories, settings }: Props) {
 
   useEffect(() => {
     const saved = localStorage.getItem('cocktaillo-cart')
-    if (saved) try { setCart(JSON.parse(saved)) } catch {}
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (!Array.isArray(parsed)) return
+      setCart(parsed.map((item: any) => {
+        const selected = Array.isArray(item.addons) ? item.addons : []
+        return {
+          ...item,
+          allowAddons: Boolean(item.allowAddons),
+          addons: selected,
+          cartKey: String(item.cartKey || makeCartKey(Number(item.id), selected))
+        }
+      }))
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -43,23 +62,41 @@ export default function Storefront({ categories, settings }: Props) {
     .sort((a,b) => Number(b.featured) - Number(a.featured)), [categories, category, query])
 
   const count = cart.reduce((n, i) => n + i.quantity, 0)
-  const subtotal = cart.reduce((n, i) => n + i.price * i.quantity, 0)
+  const subtotal = cart.reduce((n, i) => n + (i.price + addonTotal(i)) * i.quantity, 0)
   const deliveryFee = orderType === 'DELIVERY' ? Number(settings.deliveryFee || 0) : 0
   const total = subtotal + deliveryFee
+  const selectedAddons = addons.filter(addon => selectedAddonIds.includes(addon.id))
+  const customTotal = customizing ? customizing.price + selectedAddons.reduce((n, addon) => n + addon.price, 0) : 0
 
-  function add(product: Product) {
+  function addConfigured(product: Product, selected: Addon[]) {
+    const cartKey = makeCartKey(product.id, selected)
     setCart(prev => {
-      const found = prev.find(i => i.id === product.id)
+      const found = prev.find(i => i.cartKey === cartKey)
       return found
-        ? prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
-        : [...prev, { ...product, quantity: 1 }]
+        ? prev.map(i => i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i)
+        : [...prev, { ...product, quantity: 1, addons: selected, cartKey }]
     })
+    setCustomizing(null)
+    setSelectedAddonIds([])
   }
 
-  function change(id: number, delta: number) {
+  function add(product: Product) {
+    if (product.allowAddons && addons.length) {
+      setSelectedAddonIds([])
+      setCustomizing(product)
+      return
+    }
+    addConfigured(product, [])
+  }
+
+  function change(cartKey: string, delta: number) {
     setCart(prev => prev
-      .map(i => i.id === id ? { ...i, quantity: i.quantity + delta } : i)
+      .map(i => i.cartKey === cartKey ? { ...i, quantity: i.quantity + delta } : i)
       .filter(i => i.quantity > 0))
+  }
+
+  function toggleAddon(id: string) {
+    setSelectedAddonIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
   async function checkout(e: React.FormEvent<HTMLFormElement>) {
@@ -75,7 +112,7 @@ export default function Storefront({ categories, settings }: Props) {
       address: String(fd.get('address') || ''),
       notes: String(fd.get('notes') || ''),
       paymentReference: String(fd.get('paymentReference') || ''),
-      items: cart.map(i => ({ productId: i.id, quantity: i.quantity }))
+      items: cart.map(i => ({ productId: i.id, quantity: i.quantity, addons: i.addons.map(addon => addon.id) }))
     }
 
     try {
@@ -141,8 +178,8 @@ export default function Storefront({ categories, settings }: Props) {
             <label className="searchBox"><Search size={18}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search menu..." /></label>
           </div>
           {products.length ? <div className="productGrid">{products.map(p => <article className="productCard" key={p.id}>
-            <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}</div>
-            <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> Add</button></div></div>
+            <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
+            <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> {p.allowAddons && addons.length ? 'Customize' : 'Add'}</button></div></div>
           </article>)}</div> : <div className="emptyState">No menu items match your search.</div>}
         </div>
       </section>
@@ -153,9 +190,11 @@ export default function Storefront({ categories, settings }: Props) {
     <footer id="contact"><div className="container footerGrid"><div className="footerBrand"><img src="/cocktaillo-logo.jpg" alt="Cocktaillo"/><p>{settings.restaurantName}</p></div><div><strong>Quick links</strong><a href="#menu">Menu</a><a href="#order">Order options</a></div><div><strong>Connect</strong>{settings.phone && <a href={`tel:${settings.phone}`}><Phone size={15}/>{settings.phone}</a>}{settings.instagram && <a target="_blank" rel="noreferrer" href={settings.instagram}><Instagram size={15}/>Instagram</a>}{settings.facebook && <a target="_blank" rel="noreferrer" href={settings.facebook}><Facebook size={15}/>Facebook</a>}{settings.tiktok && <a target="_blank" rel="noreferrer" href={settings.tiktok}>TikTok</a>}{settings.locationUrl && <a target="_blank" rel="noreferrer" href={settings.locationUrl}><MapPin size={15}/>Location</a>}</div></div><div className="copyright">© {new Date().getFullYear()} Cocktaillo Resto - Café</div></footer>
 
     {cartOpen && <div className="drawerOverlay" onMouseDown={e => e.target === e.currentTarget && setCartOpen(false)}><aside className="cartDrawer"><div className="drawerHead"><div><small>YOUR ORDER</small><h2>Cart <span>({count})</span></h2></div><button onClick={() => setCartOpen(false)}><X/></button></div>
-      <div className="cartItems">{cart.length ? cart.map(i => <div className="cartItem" key={i.id}><div className="cartThumb">{i.imageUrl ? <img src={i.imageUrl} alt={i.name}/> : <span>C</span>}</div><div className="cartText"><strong>{i.name}</strong><small>{money(i.price)}</small><div className="qty"><button onClick={() => change(i.id,-1)}><Minus size={14}/></button><span>{i.quantity}</span><button onClick={() => change(i.id,1)}><Plus size={14}/></button></div></div><strong>{money(i.price*i.quantity)}</strong></div>) : <div className="emptyCart"><ShoppingBag/><h3>Your cart is empty</h3><p>Add something delicious from the menu.</p></div>}</div>
+      <div className="cartItems">{cart.length ? cart.map(i => <div className="cartItem" key={i.cartKey}><div className="cartThumb">{i.imageUrl ? <img src={i.imageUrl} alt={i.name}/> : <span>C</span>}</div><div className="cartText"><strong>{i.name}</strong><small>{money(i.price + addonTotal(i))}</small>{i.addons.length > 0 && <div className="cartAddons">{i.addons.map(addon => <span key={addon.id}>+ {addon.name} {money(addon.price)}</span>)}</div>}<div className="qty"><button onClick={() => change(i.cartKey,-1)}><Minus size={14}/></button><span>{i.quantity}</span><button onClick={() => change(i.cartKey,1)}><Plus size={14}/></button></div></div><strong>{money((i.price + addonTotal(i))*i.quantity)}</strong></div>) : <div className="emptyCart"><ShoppingBag/><h3>Your cart is empty</h3><p>Add something delicious from the menu.</p></div>}</div>
       {cart.length > 0 && <div className="drawerFoot"><div className="subtotal"><span>Subtotal</span><strong>{money(subtotal)}</strong></div><button className="checkoutBtn" onClick={() => setCheckoutOpen(true)}>Continue to checkout <span>{money(subtotal)}</span></button></div>}
     </aside></div>}
+
+    {customizing && <div className="modalOverlay" onMouseDown={e => e.target === e.currentTarget && setCustomizing(null)}><div className="addonModal"><div className="drawerHead"><div><small>CUSTOMIZE</small><h2>{customizing.name}</h2></div><button onClick={() => setCustomizing(null)}><X/></button></div><div className="addonModalBody"><p>Choose any optional add-ons. Prices are synced directly from the POS.</p><div className="addonChooserGrid">{addons.map(addon => { const selected = selectedAddonIds.includes(addon.id); return <button type="button" key={addon.id} className={selected ? 'selected' : ''} onClick={() => toggleAddon(addon.id)}><div><strong>{addon.name}</strong>{addon.nameAr && <small>{addon.nameAr}</small>}</div><span>{money(addon.price)}</span></button> })}</div><div className="addonRateNote">POS rate: 1 USD = {lbp(exchangeRate)}</div></div><div className="addonModalFoot"><div><span>Item</span><b>{money(customizing.price)}</b></div>{selectedAddons.length > 0 && <div><span>Add-ons</span><b>{money(selectedAddons.reduce((n, addon) => n + addon.price, 0))}</b></div>}<div className="addonGrand"><span>Total</span><b>{money(customTotal)}</b></div><button className="placeOrder" onClick={() => addConfigured(customizing, selectedAddons)}>Add to order • {money(customTotal)}</button></div></div></div>}
 
     {checkoutOpen && <div className="modalOverlay"><div className="checkoutModal"><div className="drawerHead"><div><small>CHECKOUT</small><h2>Complete your order</h2></div><button onClick={() => setCheckoutOpen(false)}><X/></button></div>
       <form onSubmit={checkout}>

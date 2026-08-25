@@ -1,13 +1,56 @@
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { getPosBaseUrl, getPosMenu } from '@/lib/pos-menu'
+import { getSettings } from '@/lib/settings'
+import { menuMediaKey, parseMenuMedia } from '@/lib/menu-media'
 import AdminShell from '@/components/AdminShell'
+import MenuMediaEditor from '@/components/MenuMediaEditor'
 
 export const dynamic = 'force-dynamic'
-export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ imported?: string; error?: string }> }) {
-  await requireAdmin(); const sp = await searchParams
-  const categories = await db.category.findMany({ orderBy:[{sortOrder:'asc'},{name:'asc'}], include:{ products:{ orderBy:[{sortOrder:'asc'},{name:'asc'}] } } })
-  return <AdminShell active="products"><div className="adminTitle"><div><span>MENU MANAGEMENT</span><h1>Menu</h1><p>Edit categories, products, prices, availability, best sellers and images.</p></div><form method="post" action="/api/admin/import"><button className="adminPrimary">Import from Al Qaima</button></form></div>{sp.imported && <div className="adminSuccess">Menu imported successfully: {sp.imported} items.</div>}{sp.error && <div className="adminError">Menu import failed. You can still manage items manually below.</div>}
-  <div className="adminTwoCol"><section className="adminPanel"><div className="panelHead"><div><h2>Categories</h2><p>Organize your menu</p></div></div><form className="inlineCreate" method="post" action="/api/admin/categories"><input type="hidden" name="action" value="create"/><input name="name" required placeholder="New category name"/><button>Add</button></form><div className="simpleList">{categories.map(c=><form method="post" action="/api/admin/categories" key={c.id}><input type="hidden" name="id" value={c.id}/><input name="name" defaultValue={c.name}/><label className="toggleLine"><input type="checkbox" name="active" defaultChecked={c.active}/> Active</label><button name="action" value="update">Save</button><button className="dangerGhost" name="action" value="delete">Delete</button></form>)}</div></section>
-  <section className="adminPanel"><div className="panelHead"><div><h2>Add product</h2><p>Create a new menu item</p></div></div><form className="adminForm" method="post" action="/api/admin/products"><input type="hidden" name="action" value="create"/><label>Name<input name="name" required/></label><div className="formRow"><label>Price (USD)<input name="price" type="number" step="0.01" min="0" required/></label><label>Category<select name="categoryId" required>{categories.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label></div><label>Description<textarea name="description"/></label><label>Image URL<input name="imageUrl" placeholder="https://..."/></label><div className="checkRow"><label><input type="checkbox" name="active" defaultChecked/>Active</label><label><input type="checkbox" name="featured"/>Best Seller</label></div><button className="adminPrimary">Add product</button></form></section></div>
-  <section className="adminPanel productAdminPanel"><div className="panelHead"><div><h2>Products</h2><p>{categories.reduce((n,c)=>n+c.products.length,0)} menu items</p></div></div><div className="productAdminGrid">{categories.flatMap(c=>c.products.map(p=><form className="productEditCard" method="post" action="/api/admin/products" key={p.id}><input type="hidden" name="id" value={p.id}/><div className="editImage">{p.imageUrl?<img src={p.imageUrl}/>:<span>C</span>}</div><div className="editFields"><input className="nameInput" name="name" defaultValue={p.name}/><div className="formRow"><label>Price<input name="price" type="number" step="0.01" min="0" defaultValue={p.price}/></label><label>Category<select name="categoryId" defaultValue={p.categoryId}>{categories.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select></label></div><label>Description<textarea name="description" defaultValue={p.description||''}/></label><label>Image URL<input name="imageUrl" defaultValue={p.imageUrl||''}/></label><div className="checkRow"><label><input type="checkbox" name="active" defaultChecked={p.active}/>Active</label><label><input type="checkbox" name="featured" defaultChecked={p.featured}/>Best Seller</label></div><div className="editActions"><button name="action" value="update">Save changes</button><button className="dangerGhost" name="action" value="delete">Delete</button></div></div></form>))}</div></section></AdminShell>
+
+const nameKey = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
+
+export default async function ProductsPage() {
+  await requireAdmin()
+
+  let posMenu
+  try {
+    posMenu = await getPosMenu()
+  } catch (error) {
+    console.error('Could not load POS menu in website admin', error)
+    return <AdminShell active="products">
+      <div className="adminTitle"><div><span>MENU MANAGEMENT</span><h1>Menu images</h1><p>The POS is the source of truth for website menu items.</p></div></div>
+      <div className="adminError">Could not connect to the Cocktaillo POS menu right now. Make sure the POS deployment is online, then refresh this page.</div>
+    </AdminShell>
+  }
+
+  const [settings, oldMetadata] = await Promise.all([
+    getSettings(),
+    db.product.findMany({ select: { name: true, imageUrl: true, description: true } })
+  ])
+  const oldByName = new Map(oldMetadata.map(product => [nameKey(product.name), product]))
+
+  const items = posMenu.items.map(item => {
+    const saved = parseMenuMedia(settings[menuMediaKey(item.id)])
+    const legacy = oldByName.get(nameKey(item.name))
+    return {
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      subcategory: item.subcategory,
+      price: item.price,
+      bestSeller: item.best_seller,
+      imageUrl: saved ? saved.imageUrl || null : legacy?.imageUrl || null,
+      description: saved ? saved.description || null : legacy?.description || null
+    }
+  })
+
+  return <AdminShell active="products">
+    <div className="adminTitle">
+      <div><span>MENU MANAGEMENT</span><h1>Menu images</h1><p>Upload photos and website descriptions for the live POS menu.</p></div>
+      <a className="adminPrimary" href={getPosBaseUrl()} target="_blank" rel="noreferrer">Open POS</a>
+    </div>
+    <div className="posMediaIntro"><strong>POS → Website:</strong> item names, categories, prices, availability and Best Seller status come from the POS. Here you only manage each item&apos;s website photo and description. Photos are compressed automatically on your phone before saving.</div>
+    <MenuMediaEditor items={items}/>
+  </AdminShell>
 }
