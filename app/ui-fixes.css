@@ -5,6 +5,23 @@ html,body{max-width:100%;overflow-x:hidden}
 .categories::-webkit-scrollbar{display:none}
 .categories button{flex:0 0 auto;scroll-snap-align:start}
 
+.customizableBadge{position:absolute;right:14px;top:14px;background:var(--green);color:#fff;border-radius:99px;padding:7px 10px;font-size:10px;font-weight:800}
+.cartAddons{display:grid;gap:3px;margin-top:2px}
+.cartAddons span{font-size:10px;color:var(--green2)}
+.addonModal{width:min(620px,100%);max-height:92vh;background:var(--paper);border-radius:22px;overflow:hidden;display:flex;flex-direction:column}
+.addonModalBody{padding:20px 24px;overflow:auto}
+.addonModalBody>p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.5}
+.addonChooserGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.addonChooserGrid>button{border:1px solid var(--line);border-radius:13px;background:#fff;padding:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:var(--ink)}
+.addonChooserGrid>button.selected{border:2px solid var(--green);background:#f1f7f2;color:var(--green)}
+.addonChooserGrid>button>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.addonChooserGrid small{color:var(--muted);font-size:10px}
+.addonChooserGrid span{white-space:nowrap;font-weight:800}
+.addonRateNote{margin-top:13px;font-size:10px;color:var(--muted)}
+.addonModalFoot{padding:17px 24px 22px;border-top:1px solid var(--line);background:#fff;display:grid;gap:8px}
+.addonModalFoot>div{display:flex;justify-content:space-between;font-size:12px}
+.addonModalFoot .addonGrand{font-size:17px;padding-top:4px}
+
 .posMediaIntro{margin-bottom:16px;padding:14px 16px;border:1px solid #dce8df;border-radius:12px;background:#f2f7f3;color:var(--green);font-size:13px;line-height:1.55}
 .posMediaGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .posMediaCard{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
@@ -38,6 +55,11 @@ html,body{max-width:100%;overflow-x:hidden}
   .sectionHeading h2{font-size:36px}
   .categories{margin-left:0;margin-right:0}
   .categories button{padding:9px 13px;font-size:12px}
+  .addonModal{max-height:94vh;border-radius:18px}
+  .addonModalBody{padding:16px}
+  .addonChooserGrid{grid-template-columns:1fr}
+  .addonModalFoot{padding:14px 16px 18px}
+  .customizableBadge{right:10px;top:10px}
   .posMediaGrid{grid-template-columns:1fr}
   .posMediaPreview{height:210px}
 }
