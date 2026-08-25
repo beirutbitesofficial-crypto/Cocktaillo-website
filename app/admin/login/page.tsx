@@ -12,19 +12,25 @@ export default function LoginPage() {
     setLoading(true)
 
     const form = event.currentTarget
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      body: new FormData(form),
-      credentials: 'same-origin',
-    })
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+      })
+      const data = await res.json().catch(() => null) as { error?: string } | null
 
-    if (!res.ok) {
-      setError('Incorrect email or password.')
+      if (!res.ok) {
+        setError(data?.error || 'Could not sign in. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      window.location.assign('/admin')
+    } catch {
+      setError('Could not reach the server. Please try again.')
       setLoading(false)
-      return
     }
-
-    window.location.assign('/admin')
   }
 
   return (
