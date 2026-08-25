@@ -39,7 +39,8 @@ export default function Storefront({ categories, settings }: Props) {
       const matchCat = category === 'all' || String(p.categoryId) === category
       const matchQuery = !query || `${p.name} ${p.description || ''}`.toLowerCase().includes(query.toLowerCase())
       return matchCat && matchQuery
-    }), [categories, category, query])
+    })
+    .sort((a,b) => Number(b.featured) - Number(a.featured)), [categories, category, query])
 
   const count = cart.reduce((n, i) => n + i.quantity, 0)
   const subtotal = cart.reduce((n, i) => n + i.price * i.quantity, 0)
@@ -140,7 +141,7 @@ export default function Storefront({ categories, settings }: Props) {
             <label className="searchBox"><Search size={18}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search menu..." /></label>
           </div>
           {products.length ? <div className="productGrid">{products.map(p => <article className="productCard" key={p.id}>
-            <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Popular</span>}</div>
+            <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}</div>
             <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> Add</button></div></div>
           </article>)}</div> : <div className="emptyState">No menu items match your search.</div>}
         </div>

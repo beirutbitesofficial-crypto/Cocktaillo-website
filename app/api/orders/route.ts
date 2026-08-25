@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
+import { getPosMenu, posProductId } from '@/lib/pos-menu'
 
 export async function POST(req: Request) {
   try {
@@ -38,21 +39,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Delivery address is required' }, { status: 400 })
     }
 
-    const ids = items.map((i: any) => Number(i.productId)).filter(Number.isFinite)
-    const products = await db.product.findMany({ where: { id: { in: ids }, active: true } })
-    const map = new Map(products.map(p => [p.id, p]))
+    let posMenu
+    try {
+      posMenu = await getPosMenu()
+    } catch (error) {
+      console.error('POS menu unavailable during checkout', error)
+      return NextResponse.json({ error: 'Menu is temporarily unavailable. Please try again.' }, { status: 503 })
+    }
+
+    const productMap = new Map<number, (typeof posMenu.items)[number]>()
+    for (const product of posMenu.items) {
+      const id = posProductId(product.id)
+      const existing = productMap.get(id)
+      if (existing && existing.id !== product.id) throw new Error('POS menu id collision')
+      productMap.set(id, product)
+    }
+
     const validItems = items
       .map((i: any) => ({
-        product: map.get(Number(i.productId)),
+        product: productMap.get(Number(i.productId)),
         quantity: Math.max(1, Math.min(50, Number(i.quantity) || 1))
       }))
       .filter((i: any) => i.product)
 
-    if (!validItems.length) {
-      return NextResponse.json({ error: 'No valid products in cart' }, { status: 400 })
+    if (!validItems.length || validItems.length !== items.length) {
+      return NextResponse.json({ error: 'One or more menu items changed. Please refresh your cart.' }, { status: 400 })
     }
 
-    const subtotal = validItems.reduce((n: number, i: any) => n + i.product.price * i.quantity, 0)
+    const subtotal = validItems.reduce((n: number, i: any) => n + Number(i.product.price) * i.quantity, 0)
     const deliveryFee = type === 'DELIVERY' ? Math.max(0, Number(settings.deliveryFee) || 0) : 0
     const total = subtotal + deliveryFee
     const orderNumber = `${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 90 + 10)}`
@@ -72,9 +86,9 @@ export async function POST(req: Request) {
         total,
         items: {
           create: validItems.map((i: any) => ({
-            productId: i.product.id,
+            productId: null,
             name: i.product.name,
-            price: i.product.price,
+            price: Number(i.product.price),
             quantity: i.quantity
           }))
         }
