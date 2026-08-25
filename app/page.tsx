@@ -29,10 +29,19 @@ export default async function Home() {
         description: savedMedia ? savedMedia.description || null : legacyMeta?.description || null,
         price: product.price,
         imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
-        featured: product.best_seller
+        featured: product.best_seller,
+        allowAddons: product.allow_addons
       }
     })
   }))
 
-  return <Storefront categories={categories} settings={settings} />
+  const addons = posMenu.addons.map(addon => ({
+    id: addon.id,
+    name: addon.name,
+    nameAr: addon.name_ar,
+    priceLbp: addon.price_lbp,
+    price: addon.price_usd || Math.round((addon.price_lbp / posMenu.exchange_rate) * 100) / 100
+  }))
+
+  return <Storefront categories={categories} settings={settings} addons={addons} exchangeRate={posMenu.exchange_rate} />
 }
