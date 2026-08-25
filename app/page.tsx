@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
 import { getPosMenu, posCategoryId, posProductId } from '@/lib/pos-menu'
+import { menuMediaKey, parseMenuMedia } from '@/lib/menu-media'
 import Storefront from '@/components/Storefront'
 
 export const dynamic = 'force-dynamic'
@@ -20,13 +21,14 @@ export default async function Home() {
     name: category.name,
     slug: category.id,
     products: category.products.map(product => {
-      const meta = byName.get(key(product.name))
+      const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
+      const legacyMeta = byName.get(key(product.name))
       return {
         id: posProductId(product.id),
         name: product.name,
-        description: meta?.description || null,
+        description: savedMedia ? savedMedia.description || null : legacyMeta?.description || null,
         price: product.price,
-        imageUrl: meta?.imageUrl || null,
+        imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
         featured: product.best_seller
       }
     })
