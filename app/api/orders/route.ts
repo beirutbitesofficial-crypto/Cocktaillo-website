@@ -54,19 +54,30 @@ export async function POST(req: Request) {
       if (existing && existing.id !== product.id) throw new Error('POS menu id collision')
       productMap.set(id, product)
     }
+    const addonMap = new Map(posMenu.addons.map(addon => [addon.id, addon]))
 
-    const validItems = items
-      .map((i: any) => ({
-        product: productMap.get(Number(i.productId)),
+    const validItems = items.map((i: any) => {
+      const product = productMap.get(Number(i.productId))
+      const requestedAddonIds = [...new Set(Array.isArray(i.addons) ? i.addons.map((id: unknown) => String(id)) : [])]
+      const selectedAddons = requestedAddonIds.map(id => addonMap.get(id)).filter(Boolean) as (typeof posMenu.addons)[number][]
+      const addonsValid = requestedAddonIds.length === selectedAddons.length && (!requestedAddonIds.length || Boolean(product?.allow_addons))
+      return {
+        product,
+        selectedAddons,
+        addonsValid,
         quantity: Math.max(1, Math.min(50, Number(i.quantity) || 1))
-      }))
-      .filter((i: any) => i.product)
+      }
+    })
 
-    if (!validItems.length || validItems.length !== items.length) {
-      return NextResponse.json({ error: 'One or more menu items changed. Please refresh your cart.' }, { status: 400 })
+    if (!validItems.length || validItems.some(i => !i.product || !i.addonsValid)) {
+      return NextResponse.json({ error: 'One or more menu items or add-ons changed. Please refresh your cart.' }, { status: 400 })
     }
 
-    const subtotal = validItems.reduce((n: number, i: any) => n + Number(i.product.price) * i.quantity, 0)
+    const rate = Math.max(1, Number(posMenu.exchange_rate) || 89500)
+    const baseSubtotalCents = validItems.reduce((n, i) => n + Math.round(Number(i.product!.price) * 100) * i.quantity, 0)
+    const addonLbpTotal = validItems.reduce((n, i) => n + i.selectedAddons.reduce((a, addon) => a + Number(addon.price_lbp || 0), 0) * i.quantity, 0)
+    const addonEquivalentCents = Math.round((addonLbpTotal / rate) * 100)
+    const subtotal = (baseSubtotalCents + addonEquivalentCents) / 100
     const deliveryFee = type === 'DELIVERY' ? Math.max(0, Number(settings.deliveryFee) || 0) : 0
     const total = subtotal + deliveryFee
     const orderNumber = `${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 90 + 10)}`
@@ -85,12 +96,16 @@ export async function POST(req: Request) {
         deliveryFee,
         total,
         items: {
-          create: validItems.map((i: any) => ({
-            productId: null,
-            name: i.product.name,
-            price: Number(i.product.price),
-            quantity: i.quantity
-          }))
+          create: validItems.map(i => {
+            const addonNames = i.selectedAddons.map(addon => addon.name).filter(Boolean)
+            const addonUnitCents = Math.round((i.selectedAddons.reduce((n, addon) => n + Number(addon.price_lbp || 0), 0) / rate) * 100)
+            return {
+              productId: null,
+              name: addonNames.length ? `${i.product!.name} + ${addonNames.join(', ')}` : i.product!.name,
+              price: (Math.round(Number(i.product!.price) * 100) + addonUnitCents) / 100,
+              quantity: i.quantity
+            }
+          })
         }
       }
     })
