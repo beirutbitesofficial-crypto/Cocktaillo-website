@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './ordering-overrides.css'
-import './ui-fixes.css'
+import './responsive-overrides.css'
 
 export const metadata: Metadata = {
   title: 'Cocktaillo Resto - Café | Order Online',
