@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Instagram, Facebook, MapPin, Minus, Plus, Search, ShoppingBag, X, CheckCircle2, Bike, PackageCheck, CreditCard, Banknote, Phone } from 'lucide-react'
 
 type Addon = { id: string; name: string; nameAr: string; priceLbp: number; price: number }
-type Product = { id: number; name: string; description: string | null; price: number; imageUrl: string | null; featured: boolean; allowAddons: boolean }
+type Product = { id: number; name: string; description: string | null; price: number; imageUrl: string | null; featured: boolean; allowAddons: boolean; subcategory: string }
 type Category = { id: number; name: string; slug: string; products: Product[] }
 type Props = { categories: Category[]; settings: Record<string, string>; addons: Addon[]; exchangeRate: number }
 type CartItem = Product & { quantity: number; addons: Addon[]; cartKey: string }
@@ -19,6 +19,7 @@ const addonTotal = (item: Pick<CartItem, 'addons'>) => item.addons.reduce((n, ad
 export default function Storefront({ categories, settings, addons, exchangeRate }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [category, setCategory] = useState('all')
+  const [subcategory, setSubcategory] = useState('all')
   const [query, setQuery] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
@@ -40,6 +41,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
         const selected = Array.isArray(item.addons) ? item.addons : []
         return {
           ...item,
+          subcategory: String(item.subcategory || ''),
           allowAddons: Boolean(item.allowAddons),
           addons: selected,
           cartKey: String(item.cartKey || makeCartKey(Number(item.id), selected))
@@ -52,14 +54,29 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
     localStorage.setItem('cocktaillo-cart', JSON.stringify(cart))
   }, [cart])
 
+  const selectedCategory = useMemo(
+    () => categories.find(c => String(c.id) === category) || null,
+    [categories, category]
+  )
+
+  const subcategories = useMemo(() => {
+    if (!selectedCategory) return []
+    return Array.from(new Set(
+      selectedCategory.products
+        .map(product => product.subcategory.trim())
+        .filter(Boolean)
+    ))
+  }, [selectedCategory])
+
   const products = useMemo(() => categories
     .flatMap(c => c.products.map(p => ({ ...p, categoryId: c.id, categoryName: c.name })))
     .filter(p => {
       const matchCat = category === 'all' || String(p.categoryId) === category
-      const matchQuery = !query || `${p.name} ${p.description || ''}`.toLowerCase().includes(query.toLowerCase())
-      return matchCat && matchQuery
+      const matchSubcategory = subcategory === 'all' || p.subcategory === subcategory
+      const matchQuery = !query || `${p.name} ${p.description || ''} ${p.subcategory}`.toLowerCase().includes(query.toLowerCase())
+      return matchCat && matchSubcategory && matchQuery
     })
-    .sort((a,b) => Number(b.featured) - Number(a.featured)), [categories, category, query])
+    .sort((a,b) => Number(b.featured) - Number(a.featured)), [categories, category, subcategory, query])
 
   const count = cart.reduce((n, i) => n + i.quantity, 0)
   const subtotal = cart.reduce((n, i) => n + (i.price + addonTotal(i)) * i.quantity, 0)
@@ -67,6 +84,11 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
   const total = subtotal + deliveryFee
   const selectedAddons = addons.filter(addon => selectedAddonIds.includes(addon.id))
   const customTotal = customizing ? customizing.price + selectedAddons.reduce((n, addon) => n + addon.price, 0) : 0
+
+  function selectCategory(value: string) {
+    setCategory(value)
+    setSubcategory('all')
+  }
 
   function addConfigured(product: Product, selected: Addon[]) {
     const cartKey = makeCartKey(product.id, selected)
@@ -174,9 +196,13 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
         <div className="container">
           <div className="sectionHeading"><div><span className="eyebrow">OUR MENU</span><h2>What are you craving?</h2></div><p>Freshly prepared, easy to order.</p></div>
           <div className="menuTools">
-            <div className="categories"><button className={category === 'all' ? 'active' : ''} onClick={() => setCategory('all')}>All</button>{categories.map(c => <button key={c.id} className={category === String(c.id) ? 'active' : ''} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}</div>
+            <div className="categories"><button className={category === 'all' ? 'active' : ''} onClick={() => selectCategory('all')}>All</button>{categories.map(c => <button key={c.id} className={category === String(c.id) ? 'active' : ''} onClick={() => selectCategory(String(c.id))}>{c.name}</button>)}</div>
             <label className="searchBox"><Search size={18}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search menu..." /></label>
           </div>
+          {category !== 'all' && subcategories.length > 0 && <div className="categories subcategories">
+            <button className={subcategory === 'all' ? 'active' : ''} onClick={() => setSubcategory('all')}>All</button>
+            {subcategories.map(name => <button key={name} className={subcategory === name ? 'active' : ''} onClick={() => setSubcategory(name)}>{name}</button>)}
+          </div>}
           {products.length ? <div className="productGrid">{products.map(p => <article className="productCard" key={p.id}>
             <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
             <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> {p.allowAddons && addons.length ? 'Customize' : 'Add'}</button></div></div>

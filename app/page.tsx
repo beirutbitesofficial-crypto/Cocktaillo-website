@@ -30,7 +30,8 @@ export default async function Home() {
         price: product.price,
         imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
         featured: product.best_seller,
-        allowAddons: product.allow_addons
+        allowAddons: product.allow_addons,
+        subcategory: product.subcategory || ''
       }
     })
   }))
