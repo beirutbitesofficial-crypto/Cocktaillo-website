@@ -9,6 +9,48 @@ export const dynamic = 'force-dynamic'
 const key = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
 const parentCategoryName = (value: string) => String(value || '').split('>')[0].trim() || String(value || '').trim()
 const categorySuffix = (value: string) => String(value || '').split('>').slice(1).join('>').trim()
+const normalizedName = (value: string) => key(value).replace(/\s+/g, ' ').trim()
+const numericSignature = (value: string) => (normalizedName(value).match(/\d+(?:\/\d+)?/g) || []).join('|')
+
+function editDistanceWithin(left: string, right: string, maxDistance: number) {
+  if (Math.abs(left.length - right.length) > maxDistance) return false
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = new Array<number>(right.length + 1)
+    current[0] = i
+    let rowMin = current[0]
+
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitution = previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1)
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, substitution)
+      rowMin = Math.min(rowMin, current[j])
+    }
+
+    if (rowMin > maxDistance) return false
+    previous = current
+  }
+
+  return previous[right.length] <= maxDistance
+}
+
+function sameProductName(leftValue: string, rightValue: string) {
+  const left = normalizedName(leftValue)
+  const right = normalizedName(rightValue)
+  if (left === right) return true
+
+  // Never collapse size/quantity variants such as 6 pcs vs 12 pcs or 1 kg vs 1/2 kg.
+  if (numericSignature(left) !== numericSignature(right)) return false
+
+  const compactLeft = left.replace(/\s+/g, '')
+  const compactRight = right.replace(/\s+/g, '')
+  const shortest = Math.min(compactLeft.length, compactRight.length)
+  if (shortest < 5) return false
+
+  // Catch safe spelling variants such as Ferrero/Frero and Marshmallow/Marchmellow.
+  const maxDistance = shortest >= 12 ? 2 : 1
+  return editDistanceWithin(compactLeft, compactRight, maxDistance)
+}
 
 export default async function Home() {
   const [posMenu, settings, metadata] = await Promise.all([
@@ -33,7 +75,7 @@ export default async function Home() {
       subcategory: string
     }>
   }>()
-  const seenProducts = new Map<string, Set<string>>()
+  const seenProducts = new Map<string, Map<string, string[]>>()
 
   for (const sourceCategory of posMenu.categories) {
     const parentName = parentCategoryName(sourceCategory.name)
@@ -47,17 +89,20 @@ export default async function Home() {
         slug: `parent:${parentName}`,
         products: []
       })
-      seenProducts.set(groupKey, new Set())
+      seenProducts.set(groupKey, new Map())
     }
 
     const targetCategory = grouped.get(groupKey)!
-    const seen = seenProducts.get(groupKey)!
+    const seenBySubcategory = seenProducts.get(groupKey)!
 
     for (const product of sourceCategory.products) {
       const resolvedSubcategory = String(product.subcategory || inferredSubcategory || '').trim()
-      const duplicateKey = `${key(resolvedSubcategory)}|${key(product.name)}`
-      if (seen.has(duplicateKey)) continue
-      seen.add(duplicateKey)
+      const subcategoryKey = key(resolvedSubcategory)
+      if (!seenBySubcategory.has(subcategoryKey)) seenBySubcategory.set(subcategoryKey, [])
+      const seenNames = seenBySubcategory.get(subcategoryKey)!
+
+      if (seenNames.some(name => sameProductName(name, product.name))) continue
+      seenNames.push(product.name)
 
       const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
       const legacyMeta = byName.get(key(product.name))
