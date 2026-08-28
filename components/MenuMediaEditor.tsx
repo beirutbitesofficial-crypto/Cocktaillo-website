@@ -14,8 +14,14 @@ type Item = {
 }
 
 const money = (value: number) => `$${Number(value || 0).toFixed(2)}`
-const TARGET_CHARS = 42000
-const MAX_READY_CHARS = 46000
+const TARGET_CHARS = 52000
+const HARD_MAX_CHARS = 58000
+
+function encodeCanvas(canvas: HTMLCanvasElement, quality: number) {
+  const webp = canvas.toDataURL('image/webp', quality)
+  if (webp.startsWith('data:image/webp;base64,')) return webp
+  return canvas.toDataURL('image/jpeg', quality)
+}
 
 async function compressMenuImage(file: File) {
   if (!file.type.startsWith('image/')) throw new Error('Choose an image file.')
@@ -29,11 +35,11 @@ async function compressMenuImage(file: File) {
       img.src = objectUrl
     })
 
-    let maxDimension = 820
-    let quality = 0.78
+    let maxDimension = 760
+    let quality = 0.76
     let last = ''
 
-    for (let attempt = 0; attempt < 14; attempt += 1) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
       const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight))
       const width = Math.max(1, Math.round(image.naturalWidth * scale))
       const height = Math.max(1, Math.round(image.naturalHeight * scale))
@@ -46,18 +52,20 @@ async function compressMenuImage(file: File) {
       ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, width, height)
       ctx.drawImage(image, 0, 0, width, height)
-      last = canvas.toDataURL('image/jpeg', quality)
+      last = encodeCanvas(canvas, quality)
+
       if (last.length <= TARGET_CHARS) return last
 
-      if (quality > 0.42) quality -= 0.07
-      else {
-        maxDimension = Math.max(360, Math.round(maxDimension * 0.82))
+      if (quality > 0.34) {
+        quality = Math.max(0.32, quality - 0.08)
+      } else {
+        maxDimension = Math.max(260, Math.round(maxDimension * 0.82))
         quality = 0.62
       }
     }
 
-    if (last.length <= MAX_READY_CHARS) return last
-    throw new Error('This photo is too large after compression. Choose a smaller image.')
+    if (last.length <= HARD_MAX_CHARS) return last
+    throw new Error('Could not compress this image enough. Try another photo.')
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
