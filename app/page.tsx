@@ -7,6 +7,8 @@ import Storefront from '@/components/Storefront'
 export const dynamic = 'force-dynamic'
 
 const key = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
+const parentCategoryName = (value: string) => String(value || '').split('>')[0].trim() || String(value || '').trim()
+const categorySuffix = (value: string) => String(value || '').split('>').slice(1).join('>').trim()
 
 export default async function Home() {
   const [posMenu, settings, metadata] = await Promise.all([
@@ -16,14 +18,41 @@ export default async function Home() {
   ])
 
   const byName = new Map(metadata.map(p => [key(p.name), p]))
-  const categories = posMenu.categories.map(category => ({
-    id: posCategoryId(category.id),
-    name: category.name,
-    slug: category.id,
-    products: category.products.map(product => {
+  const grouped = new Map<string, {
+    id: number
+    name: string
+    slug: string
+    products: Array<{
+      id: number
+      name: string
+      description: string | null
+      price: number
+      imageUrl: string | null
+      featured: boolean
+      allowAddons: boolean
+      subcategory: string
+    }>
+  }>()
+
+  for (const sourceCategory of posMenu.categories) {
+    const parentName = parentCategoryName(sourceCategory.name)
+    const groupKey = parentName.toLowerCase()
+    const inferredSubcategory = categorySuffix(sourceCategory.name)
+
+    if (!grouped.has(groupKey)) {
+      grouped.set(groupKey, {
+        id: posCategoryId(`parent:${parentName}`),
+        name: parentName,
+        slug: `parent:${parentName}`,
+        products: []
+      })
+    }
+
+    const targetCategory = grouped.get(groupKey)!
+    for (const product of sourceCategory.products) {
       const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
       const legacyMeta = byName.get(key(product.name))
-      return {
+      targetCategory.products.push({
         id: posProductId(product.id),
         name: product.name,
         description: savedMedia ? savedMedia.description || null : legacyMeta?.description || null,
@@ -31,10 +60,12 @@ export default async function Home() {
         imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
         featured: product.best_seller,
         allowAddons: product.allow_addons,
-        subcategory: product.subcategory || ''
-      }
-    })
-  }))
+        subcategory: String(product.subcategory || inferredSubcategory || '').trim()
+      })
+    }
+  }
+
+  const categories = Array.from(grouped.values())
 
   const addons = posMenu.addons.map(addon => ({
     id: addon.id,
