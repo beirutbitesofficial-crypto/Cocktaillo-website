@@ -16,6 +16,16 @@ type Item = {
 const money = (value: number) => `$${Number(value || 0).toFixed(2)}`
 const TARGET_CHARS = 58000
 
+const filenameKey = (value: string) => value
+  .replace(/\.[^.]+$/, '')
+  .toLowerCase()
+  .normalize('NFKD')
+  .replace(/[’']/g, '')
+  .replace(/&/g, ' and ')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+
 async function compressMenuImage(file: File) {
   if (!file.type.startsWith('image/')) throw new Error('Choose an image file.')
 
@@ -59,6 +69,22 @@ async function compressMenuImage(file: File) {
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
+}
+
+async function persistImage(item: Item, imageUrl: string) {
+  const response = await fetch('/api/admin/menu-media', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      itemId: item.id,
+      name: item.name,
+      description: item.description || '',
+      imageUrl
+    })
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(data.error || `Could not save ${item.name}.`)
+  return data
 }
 
 function MediaCard({ item }: { item: Item }) {
@@ -129,6 +155,74 @@ function MediaCard({ item }: { item: Item }) {
   </article>
 }
 
+function BulkMenuImageUpload({ items }: { items: Item[] }) {
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function uploadFiles(fileList: FileList | null) {
+    const files = Array.from(fileList || [])
+    if (!files.length || busy) return
+
+    const itemsByName = new Map<string, Item[]>()
+    for (const item of items) {
+      const key = filenameKey(item.name)
+      const matches = itemsByName.get(key) || []
+      matches.push(item)
+      itemsByName.set(key, matches)
+    }
+
+    setBusy(true)
+    let saved = 0
+    const unmatched: string[] = []
+    const failed: string[] = []
+
+    try {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index]
+        const matches = itemsByName.get(filenameKey(file.name)) || []
+
+        if (matches.length !== 1) {
+          unmatched.push(file.name)
+          continue
+        }
+
+        const item = matches[0]
+        setStatus(`Processing ${index + 1}/${files.length}: ${item.name}`)
+
+        try {
+          const compressed = await compressMenuImage(file)
+          await persistImage(item, compressed)
+          saved += 1
+        } catch {
+          failed.push(file.name)
+        }
+      }
+
+      const parts = [`${saved} image${saved === 1 ? '' : 's'} saved ✓`]
+      if (unmatched.length) parts.push(`No name match: ${unmatched.join(', ')}`)
+      if (failed.length) parts.push(`Failed: ${failed.join(', ')}`)
+      setStatus(parts.join(' · '))
+
+      if (saved > 0 && unmatched.length === 0 && failed.length === 0) {
+        window.setTimeout(() => window.location.reload(), 700)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <div className="posMediaIntro">
+    <strong>Bulk upload by filename:</strong> choose multiple photos at once. A file named <code>crepe-chocolate.png</code> matches <strong>Crepe - Chocolate</strong>, <code>crepe-nutella.png</code> matches <strong>Crepe - Nutella</strong>, and so on. Matching photos are compressed and saved automatically.
+    <div style={{ marginTop: 12 }}>
+      <input type="file" accept="image/*" multiple disabled={busy} onChange={event => void uploadFiles(event.target.files)}/>
+    </div>
+    <div className="posMediaStatus" style={{ marginTop: 8 }}>{busy ? 'Uploading… ' : ''}{status}</div>
+  </div>
+}
+
 export default function MenuMediaEditor({ items }: { items: Item[] }) {
-  return <div className="posMediaGrid">{items.map(item => <MediaCard key={item.id} item={item}/>)}</div>
+  return <>
+    <BulkMenuImageUpload items={items}/>
+    <div className="posMediaGrid">{items.map(item => <MediaCard key={item.id} item={item}/>)}</div>
+  </>
 }
