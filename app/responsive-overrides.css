@@ -39,11 +39,32 @@ html,body{max-width:100%;overflow-x:hidden}
 .posMediaBody textarea{min-height:70px;resize:vertical}
 .posMediaBody textarea,.posMediaBody input[type=file]{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px}
 .posMediaActions{display:flex;gap:8px;flex-wrap:wrap}
-.posMediaActions button{border:0;border-radius:10px;padding:10px 13px;font-weight:700}
+.posMediaActions button,.posMediaAdjust{border:0;border-radius:10px;padding:10px 13px;font-weight:700}
 .posMediaSave{background:var(--green);color:#fff}
 .posMediaRemove{background:#fff0f0;color:#963535}
-.posMediaActions button:disabled{opacity:.55;cursor:wait}
+.posMediaAdjust{justify-self:start;background:#eef4ef;color:var(--green);border:1px solid #dce8df}
+.posMediaActions button:disabled,.posMediaAdjust:disabled{opacity:.55;cursor:wait}
 .posMediaStatus{min-height:18px;font-size:11px;color:var(--muted)}
+
+.imageCropOverlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+.imageCropDialog{width:min(620px,100%);background:#111;color:#fff;border-radius:22px;overflow:hidden;box-shadow:0 28px 90px rgba(0,0,0,.38)}
+.imageCropHeader{height:58px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.12)}
+.imageCropHeader strong{font-size:15px;text-align:center}
+.imageCropHeader button{border:0;background:transparent;color:#fff;font-size:13px;padding:8px 0}
+.imageCropHeader button:first-child{justify-self:start}
+.imageCropHeader .imageCropUse{justify-self:end;color:#4aa3ff;font-weight:800}
+.imageCropHeader button:disabled{opacity:.5}
+.imageCropStage{position:relative;width:100%;aspect-ratio:16/9;background:#000;overflow:hidden}
+.imageCropCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.imageCropCanvas:active{cursor:grabbing}
+.imageCropGrid{position:absolute;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.8) 33.3%,rgba(255,255,255,.8) 33.6%,transparent 33.7%,transparent 66.2%,rgba(255,255,255,.8) 66.3%,rgba(255,255,255,.8) 66.6%,transparent 66.7%),linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.8) 33.3%,rgba(255,255,255,.8) 33.6%,transparent 33.7%,transparent 66.2%,rgba(255,255,255,.8) 66.3%,rgba(255,255,255,.8) 66.6%,transparent 66.7%)}
+.imageCropControls{padding:18px 18px 20px;display:grid;gap:16px;background:#111}
+.imageCropHint{text-align:center;font-size:11px;color:#aaa}
+.imageCropZoom{display:grid;grid-template-columns:24px 1fr 24px;align-items:center;gap:10px}
+.imageCropZoom span{text-align:center;font-size:21px;font-weight:300;color:#ddd}
+.imageCropZoom input{width:100%;accent-color:#fff}
+.imageCropReset{justify-self:center;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:700}
+.imageCropReset:disabled{opacity:.5}
 
 @media(max-width:820px){
   .menuTools{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;width:100%;overflow:hidden}
@@ -67,4 +88,9 @@ html,body{max-width:100%;overflow-x:hidden}
   .customizableBadge{right:10px;top:10px}
   .posMediaGrid{grid-template-columns:1fr}
   .posMediaPreview{height:210px}
+  .imageCropOverlay{padding:0;background:#000;align-items:stretch}
+  .imageCropDialog{width:100%;height:100dvh;max-width:none;border-radius:0;display:flex;flex-direction:column;justify-content:center}
+  .imageCropHeader{position:absolute;top:0;left:0;right:0;z-index:2;background:rgba(17,17,17,.92);padding-top:max(0px,env(safe-area-inset-top));height:calc(58px + env(safe-area-inset-top))}
+  .imageCropStage{margin-top:auto;margin-bottom:auto;width:100%;aspect-ratio:16/9}
+  .imageCropControls{padding-bottom:calc(20px + env(safe-area-inset-bottom));background:#111}
 }
