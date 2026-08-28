@@ -33,6 +33,7 @@ export default async function Home() {
       subcategory: string
     }>
   }>()
+  const seenProducts = new Map<string, Set<string>>()
 
   for (const sourceCategory of posMenu.categories) {
     const parentName = parentCategoryName(sourceCategory.name)
@@ -46,10 +47,18 @@ export default async function Home() {
         slug: `parent:${parentName}`,
         products: []
       })
+      seenProducts.set(groupKey, new Set())
     }
 
     const targetCategory = grouped.get(groupKey)!
+    const seen = seenProducts.get(groupKey)!
+
     for (const product of sourceCategory.products) {
+      const resolvedSubcategory = String(product.subcategory || inferredSubcategory || '').trim()
+      const duplicateKey = `${key(resolvedSubcategory)}|${key(product.name)}`
+      if (seen.has(duplicateKey)) continue
+      seen.add(duplicateKey)
+
       const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
       const legacyMeta = byName.get(key(product.name))
       targetCategory.products.push({
@@ -60,7 +69,7 @@ export default async function Home() {
         imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
         featured: product.best_seller,
         allowAddons: product.allow_addons,
-        subcategory: String(product.subcategory || inferredSubcategory || '').trim()
+        subcategory: resolvedSubcategory
       })
     }
   }
