@@ -33,16 +33,27 @@ function comparableFlavor(value: string, subcategory: string) {
   let name = normalizedName(value)
   const sub = normalizedName(subcategory)
 
-  // Legacy POS items may be named only by flavor ("Chocolate"), while the
-  // canonical item includes its format ("Crepe - Chocolate"). Compare the
-  // flavor portion inside the same subcategory.
   if (sub && name.startsWith(`${sub} `)) name = name.slice(sub.length).trim()
   else if (sub && name.endsWith(` ${sub}`)) name = name.slice(0, -sub.length).trim()
 
-  // Normalize possessives such as "Lotus's" / "Lotus’s" -> "Lotus".
   name = name.replace(/\s+s$/, '').trim()
-
   return flavorAliases[name] || name
+}
+
+function baseFlavor(value: string, subcategory: string) {
+  let name = comparableFlavor(value, subcategory)
+  name = name
+    .replace(/\b\d+(?:\/\d+)?\s*(?:pcs?|pieces?|piece|kg|g|ml|l)\b/g, ' ')
+    .replace(/\b(?:pcs?|pieces?|piece)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return flavorAliases[name] || name
+}
+
+function hasSubcategoryName(value: string, subcategory: string) {
+  const name = normalizedName(value)
+  const sub = normalizedName(subcategory)
+  return Boolean(sub && (name.startsWith(`${sub} `) || name.endsWith(` ${sub}`)))
 }
 
 function editDistanceWithin(left: string, right: string, maxDistance: number) {
@@ -72,7 +83,6 @@ function sameProductName(leftValue: string, rightValue: string, subcategory: str
   const right = comparableFlavor(rightValue, subcategory)
   if (left === right) return true
 
-  // Never collapse size/quantity variants such as 6 pcs vs 12 pcs or 1 kg vs 1/2 kg.
   if (numericSignature(leftValue) !== numericSignature(rightValue)) return false
 
   const compactLeft = left.replace(/\s+/g, '')
@@ -80,6 +90,19 @@ function sameProductName(leftValue: string, rightValue: string, subcategory: str
   const shortest = Math.min(compactLeft.length, compactRight.length)
   if (shortest < 5) return false
 
+  const maxDistance = shortest >= 12 ? 2 : 1
+  return editDistanceWithin(compactLeft, compactRight, maxDistance)
+}
+
+function sameBaseFlavor(leftValue: string, rightValue: string, subcategory: string) {
+  const left = baseFlavor(leftValue, subcategory)
+  const right = baseFlavor(rightValue, subcategory)
+  if (left === right) return true
+
+  const compactLeft = left.replace(/\s+/g, '')
+  const compactRight = right.replace(/\s+/g, '')
+  const shortest = Math.min(compactLeft.length, compactRight.length)
+  if (shortest < 5) return false
   const maxDistance = shortest >= 12 ? 2 : 1
   return editDistanceWithin(compactLeft, compactRight, maxDistance)
 }
@@ -107,6 +130,7 @@ type SeenProduct = {
   name: string
   index: number
   score: number
+  structured: boolean
 }
 
 export default async function Home() {
@@ -148,10 +172,20 @@ export default async function Home() {
       const subcategoryKey = key(resolvedSubcategory)
       if (!seenBySubcategory.has(subcategoryKey)) seenBySubcategory.set(subcategoryKey, [])
       const seenNames = seenBySubcategory.get(subcategoryKey)!
-      const duplicate = seenNames.find(entry => sameProductName(entry.name, product.name, resolvedSubcategory))
-      const preference = productPreference(product.name, resolvedSubcategory, product.allow_addons)
+      const structured = hasSubcategoryName(product.name, resolvedSubcategory)
 
-      if (duplicate && preference <= duplicate.score) continue
+      const crossFormatDuplicate = seenNames.find(entry =>
+        entry.structured !== structured && sameBaseFlavor(entry.name, product.name, resolvedSubcategory)
+      )
+
+      if (!structured && crossFormatDuplicate?.structured) continue
+
+      let duplicate = structured && crossFormatDuplicate && !crossFormatDuplicate.structured
+        ? crossFormatDuplicate
+        : seenNames.find(entry => sameProductName(entry.name, product.name, resolvedSubcategory))
+
+      const preference = productPreference(product.name, resolvedSubcategory, product.allow_addons)
+      if (duplicate && preference <= duplicate.score && duplicate.structured === structured) continue
 
       const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
       const legacyMeta = byName.get(key(product.name))
@@ -170,11 +204,12 @@ export default async function Home() {
         targetCategory.products[duplicate.index] = mappedProduct
         duplicate.name = product.name
         duplicate.score = preference
+        duplicate.structured = structured
         continue
       }
 
       const index = targetCategory.products.push(mappedProduct) - 1
-      seenNames.push({ name: product.name, index, score: preference })
+      seenNames.push({ name: product.name, index, score: preference, structured })
     }
   }
 
