@@ -71,14 +71,14 @@ async function compressMenuImage(file: File) {
   }
 }
 
-async function persistImage(item: Item, imageUrl: string) {
+async function persistImage(item: Item, imageUrl: string, description = item.description || '') {
   const response = await fetch('/api/admin/menu-media', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       itemId: item.id,
       name: item.name,
-      description: item.description || '',
+      description,
       imageUrl
     })
   })
@@ -94,32 +94,33 @@ function MediaCard({ item }: { item: Item }) {
   const [status, setStatus] = useState('')
 
   async function chooseImage(file?: File) {
-    if (!file) return
+    if (!file || saving) return
+    setSaving(true)
     setStatus('Preparing image…')
     try {
       const compressed = await compressMenuImage(file)
       setImageUrl(compressed)
-      setStatus('Image ready — press Save.')
+      setStatus('Saving image…')
+      const data = await persistImage(item, compressed, description)
+      setImageUrl(data.imageUrl || compressed)
+      setStatus('Image saved ✓')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Could not prepare image.')
+      setStatus(error instanceof Error ? error.message : 'Could not save image.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  async function save(nextImage = imageUrl) {
+  async function save(nextImage?: string) {
     setSaving(true)
     setStatus('Saving…')
     try {
-      const response = await fetch('/api/admin/menu-media', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, name: item.name, description, imageUrl: nextImage })
-      })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error || 'Could not save image.')
+      const valueToSave = nextImage === undefined ? imageUrl : nextImage
+      const data = await persistImage(item, valueToSave, description)
       setImageUrl(data.imageUrl || '')
       setStatus('Saved ✓')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Could not save image.')
+      setStatus(error instanceof Error ? error.message : 'Could not save changes.')
     } finally {
       setSaving(false)
     }
@@ -141,13 +142,13 @@ function MediaCard({ item }: { item: Item }) {
         <div className="posMediaMeta"><span>{item.category}{item.subcategory ? ` › ${item.subcategory}` : ''}</span><span>•</span><b>{money(item.price)}</b></div>
       </div>
       <label>Upload menu photo
-        <input type="file" accept="image/*" onChange={event => void chooseImage(event.target.files?.[0])}/>
+        <input type="file" accept="image/*" disabled={saving} onChange={event => void chooseImage(event.target.files?.[0])}/>
       </label>
       <label>Description
         <textarea value={description} maxLength={1200} onChange={event => setDescription(event.target.value)} placeholder="Optional description shown on the website"/>
       </label>
       <div className="posMediaActions">
-        <button className="posMediaSave" type="button" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="posMediaSave" type="button" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save changes'}</button>
         {imageUrl && <button className="posMediaRemove" type="button" disabled={saving} onClick={() => void removeImage()}>Remove image</button>}
       </div>
       <div className="posMediaStatus">{status}</div>
