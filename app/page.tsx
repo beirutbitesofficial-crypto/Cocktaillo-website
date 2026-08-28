@@ -29,33 +29,6 @@ const flavorAliases: Record<string, string> = {
   pistacho: 'pistachio'
 }
 
-function comparableFlavor(value: string, subcategory: string) {
-  let name = normalizedName(value)
-  const sub = normalizedName(subcategory)
-
-  if (sub && name.startsWith(`${sub} `)) name = name.slice(sub.length).trim()
-  else if (sub && name.endsWith(` ${sub}`)) name = name.slice(0, -sub.length).trim()
-
-  name = name.replace(/\s+s$/, '').trim()
-  return flavorAliases[name] || name
-}
-
-function baseFlavor(value: string, subcategory: string) {
-  let name = comparableFlavor(value, subcategory)
-  name = name
-    .replace(/\b\d+(?:\/\d+)?\s*(?:pcs?|pieces?|piece|kg|g|ml|l)\b/g, ' ')
-    .replace(/\b(?:pcs?|pieces?|piece)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  return flavorAliases[name] || name
-}
-
-function hasSubcategoryName(value: string, subcategory: string) {
-  const name = normalizedName(value)
-  const sub = normalizedName(subcategory)
-  return Boolean(sub && (name.startsWith(`${sub} `) || name.endsWith(` ${sub}`)))
-}
-
 function editDistanceWithin(left: string, right: string, maxDistance: number) {
   if (Math.abs(left.length - right.length) > maxDistance) return false
   let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
@@ -76,6 +49,57 @@ function editDistanceWithin(left: string, right: string, maxDistance: number) {
   }
 
   return previous[right.length] <= maxDistance
+}
+
+function stripSubcategoryName(value: string, subcategory: string) {
+  const original = normalizedName(value)
+  const sub = normalizedName(subcategory)
+  if (!sub) return original
+
+  if (original.startsWith(`${sub} `)) return original.slice(sub.length).trim()
+  if (original.endsWith(` ${sub}`)) return original.slice(0, -sub.length).trim()
+
+  const words = original.split(' ')
+  const subWords = sub.split(' ')
+  if (words.length < subWords.length) return original
+
+  const compactSub = sub.replace(/\s+/g, '')
+  const maxDistance = compactSub.length >= 10 ? 2 : 1
+  const nearMatch = (candidate: string) => {
+    const compactCandidate = candidate.replace(/\s+/g, '')
+    if (Math.min(compactCandidate.length, compactSub.length) < 4) return false
+    return editDistanceWithin(compactCandidate, compactSub, maxDistance)
+  }
+
+  const prefix = words.slice(0, subWords.length).join(' ')
+  if (nearMatch(prefix)) return words.slice(subWords.length).join(' ').trim()
+
+  const suffix = words.slice(-subWords.length).join(' ')
+  if (nearMatch(suffix)) return words.slice(0, -subWords.length).join(' ').trim()
+
+  return original
+}
+
+function comparableFlavor(value: string, subcategory: string) {
+  let name = stripSubcategoryName(value, subcategory)
+  name = name.replace(/\s+s$/, '').trim()
+  return flavorAliases[name] || name
+}
+
+function baseFlavor(value: string, subcategory: string) {
+  let name = comparableFlavor(value, subcategory)
+  name = name
+    .replace(/\b\d+(?:\/\d+)?\s*(?:pcs?|pieces?|piece|kg|g|ml|l)\b/g, ' ')
+    .replace(/\b(?:pcs?|pieces?|piece)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return flavorAliases[name] || name
+}
+
+function hasSubcategoryName(value: string, subcategory: string) {
+  const name = normalizedName(value)
+  const sub = normalizedName(subcategory)
+  return Boolean(sub && (name.startsWith(`${sub} `) || name.endsWith(` ${sub}`)))
 }
 
 function sameProductName(leftValue: string, rightValue: string, subcategory: string) {
@@ -174,13 +198,17 @@ export default async function Home() {
       const seenNames = seenBySubcategory.get(subcategoryKey)!
       const structured = hasSubcategoryName(product.name, resolvedSubcategory)
 
-      const crossFormatDuplicate = seenNames.find(entry =>
-        entry.structured !== structured && sameBaseFlavor(entry.name, product.name, resolvedSubcategory)
-      )
+      const crossFormatDuplicate = seenNames.find(entry => {
+        if (entry.structured === structured) return false
+        if (!sameBaseFlavor(entry.name, product.name, resolvedSubcategory)) return false
+        const entryNumbers = numericSignature(entry.name)
+        const productNumbers = numericSignature(product.name)
+        return entryNumbers === productNumbers || !entryNumbers || !productNumbers
+      })
 
       if (!structured && crossFormatDuplicate?.structured) continue
 
-      let duplicate = structured && crossFormatDuplicate && !crossFormatDuplicate.structured
+      const duplicate = structured && crossFormatDuplicate && !crossFormatDuplicate.structured
         ? crossFormatDuplicate
         : seenNames.find(entry => sameProductName(entry.name, product.name, resolvedSubcategory))
 
