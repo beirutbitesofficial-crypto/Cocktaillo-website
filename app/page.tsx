@@ -12,6 +12,39 @@ const categorySuffix = (value: string) => String(value || '').split('>').slice(1
 const normalizedName = (value: string) => key(value).replace(/\s+/g, ' ').trim()
 const numericSignature = (value: string) => (normalizedName(value).match(/\d+(?:\/\d+)?/g) || []).join('|')
 
+const flavorAliases: Record<string, string> = {
+  frero: 'ferrero',
+  ferero: 'ferrero',
+  ferraro: 'ferrero',
+  marchmello: 'marshmallow',
+  marchmellow: 'marshmallow',
+  marchmallow: 'marshmallow',
+  marshmello: 'marshmallow',
+  marshmellow: 'marshmallow',
+  belgium: 'belgian chocolate',
+  'belgium chocolate': 'belgian chocolate',
+  belgian: 'belgian chocolate',
+  pistache: 'pistachio',
+  pistacio: 'pistachio',
+  pistacho: 'pistachio'
+}
+
+function comparableFlavor(value: string, subcategory: string) {
+  let name = normalizedName(value)
+  const sub = normalizedName(subcategory)
+
+  // Legacy POS items may be named only by flavor ("Chocolate"), while the
+  // canonical item includes its format ("Crepe - Chocolate"). Compare the
+  // flavor portion inside the same subcategory.
+  if (sub && name.startsWith(`${sub} `)) name = name.slice(sub.length).trim()
+  else if (sub && name.endsWith(` ${sub}`)) name = name.slice(0, -sub.length).trim()
+
+  // Normalize possessives such as "Lotus's" / "Lotus’s" -> "Lotus".
+  name = name.replace(/\s+s$/, '').trim()
+
+  return flavorAliases[name] || name
+}
+
 function editDistanceWithin(left: string, right: string, maxDistance: number) {
   if (Math.abs(left.length - right.length) > maxDistance) return false
   let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
@@ -34,22 +67,46 @@ function editDistanceWithin(left: string, right: string, maxDistance: number) {
   return previous[right.length] <= maxDistance
 }
 
-function sameProductName(leftValue: string, rightValue: string) {
-  const left = normalizedName(leftValue)
-  const right = normalizedName(rightValue)
+function sameProductName(leftValue: string, rightValue: string, subcategory: string) {
+  const left = comparableFlavor(leftValue, subcategory)
+  const right = comparableFlavor(rightValue, subcategory)
   if (left === right) return true
 
   // Never collapse size/quantity variants such as 6 pcs vs 12 pcs or 1 kg vs 1/2 kg.
-  if (numericSignature(left) !== numericSignature(right)) return false
+  if (numericSignature(leftValue) !== numericSignature(rightValue)) return false
 
   const compactLeft = left.replace(/\s+/g, '')
   const compactRight = right.replace(/\s+/g, '')
   const shortest = Math.min(compactLeft.length, compactRight.length)
   if (shortest < 5) return false
 
-  // Catch safe spelling variants such as Ferrero/Frero and Marshmallow/Marchmellow.
   const maxDistance = shortest >= 12 ? 2 : 1
   return editDistanceWithin(compactLeft, compactRight, maxDistance)
+}
+
+function productPreference(name: string, subcategory: string, allowAddons: boolean) {
+  const normalized = normalizedName(name)
+  const sub = normalizedName(subcategory)
+  let score = allowAddons ? 2 : 0
+  if (sub && (normalized.startsWith(`${sub} `) || normalized.endsWith(` ${sub}`))) score += 4
+  return score
+}
+
+type StorefrontProduct = {
+  id: number
+  name: string
+  description: string | null
+  price: number
+  imageUrl: string | null
+  featured: boolean
+  allowAddons: boolean
+  subcategory: string
+}
+
+type SeenProduct = {
+  name: string
+  index: number
+  score: number
 }
 
 export default async function Home() {
@@ -64,18 +121,9 @@ export default async function Home() {
     id: number
     name: string
     slug: string
-    products: Array<{
-      id: number
-      name: string
-      description: string | null
-      price: number
-      imageUrl: string | null
-      featured: boolean
-      allowAddons: boolean
-      subcategory: string
-    }>
+    products: StorefrontProduct[]
   }>()
-  const seenProducts = new Map<string, Map<string, string[]>>()
+  const seenProducts = new Map<string, Map<string, SeenProduct[]>>()
 
   for (const sourceCategory of posMenu.categories) {
     const parentName = parentCategoryName(sourceCategory.name)
@@ -100,13 +148,14 @@ export default async function Home() {
       const subcategoryKey = key(resolvedSubcategory)
       if (!seenBySubcategory.has(subcategoryKey)) seenBySubcategory.set(subcategoryKey, [])
       const seenNames = seenBySubcategory.get(subcategoryKey)!
+      const duplicate = seenNames.find(entry => sameProductName(entry.name, product.name, resolvedSubcategory))
+      const preference = productPreference(product.name, resolvedSubcategory, product.allow_addons)
 
-      if (seenNames.some(name => sameProductName(name, product.name))) continue
-      seenNames.push(product.name)
+      if (duplicate && preference <= duplicate.score) continue
 
       const savedMedia = parseMenuMedia(settings[menuMediaKey(product.id)])
       const legacyMeta = byName.get(key(product.name))
-      targetCategory.products.push({
+      const mappedProduct: StorefrontProduct = {
         id: posProductId(product.id),
         name: product.name,
         description: savedMedia ? savedMedia.description || null : legacyMeta?.description || null,
@@ -115,7 +164,17 @@ export default async function Home() {
         featured: product.best_seller,
         allowAddons: product.allow_addons,
         subcategory: resolvedSubcategory
-      })
+      }
+
+      if (duplicate) {
+        targetCategory.products[duplicate.index] = mappedProduct
+        duplicate.name = product.name
+        duplicate.score = preference
+        continue
+      }
+
+      const index = targetCategory.products.push(mappedProduct) - 1
+      seenNames.push({ name: product.name, index, score: preference })
     }
   }
 
