@@ -3,6 +3,7 @@ import './globals.css'
 import './ordering-overrides.css'
 import './responsive-overrides.css'
 import './hero-polish.css'
+import './hero-glass.css'
 
 export const metadata: Metadata = {
   title: 'Cocktaillo Resto - Café | Order Online',
