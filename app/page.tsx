@@ -12,6 +12,14 @@ const categorySuffix = (value: string) => String(value || '').split('>').slice(1
 const normalizedName = (value: string) => key(value).replace(/\s+/g, ' ').trim()
 const numericSignature = (value: string) => (normalizedName(value).match(/\d+(?:\/\d+)?/g) || []).join('|')
 
+function sizeSignature(value: string) {
+  const tokens = normalizedName(value).split(' ').filter(Boolean)
+  const sizes = tokens
+    .filter(token => ['s', 'm', 'l', 'small', 'medium', 'large'].includes(token))
+    .map(token => token === 's' || token === 'small' ? 'small' : token === 'm' || token === 'medium' ? 'medium' : 'large')
+  return sizes.join('|')
+}
+
 const flavorAliases: Record<string, string> = {
   frero: 'ferrero',
   ferero: 'ferrero',
@@ -26,7 +34,19 @@ const flavorAliases: Record<string, string> = {
   belgian: 'belgian chocolate',
   pistache: 'pistachio',
   pistacio: 'pistachio',
-  pistacho: 'pistachio'
+  pistacho: 'pistachio',
+  nuttela: 'nutella',
+  nutella: 'nutella',
+  lutos: 'lotus'
+}
+
+const shakeFlavorAliases: Record<string, string> = {
+  'chocolate nutella': 'nutella',
+  'chocolate nuttela': 'nutella',
+  'nutella shake': 'nutella',
+  'nuttela shake': 'nutella',
+  'lotus shake': 'lotus',
+  'lutos shake': 'lotus'
 }
 
 function editDistanceWithin(left: string, right: string, maxDistance: number) {
@@ -83,7 +103,9 @@ function stripSubcategoryName(value: string, subcategory: string) {
 function comparableFlavor(value: string, subcategory: string) {
   let name = stripSubcategoryName(value, subcategory)
   name = name.replace(/\s+s$/, '').trim()
-  return flavorAliases[name] || name
+  name = flavorAliases[name] || name
+  if (['shake', 'shakes'].includes(normalizedName(subcategory))) name = shakeFlavorAliases[name] || name
+  return name
 }
 
 function baseFlavor(value: string, subcategory: string) {
@@ -105,6 +127,9 @@ function hasSubcategoryName(value: string, subcategory: string) {
 function sameProductName(leftValue: string, rightValue: string, subcategory: string) {
   const left = comparableFlavor(leftValue, subcategory)
   const right = comparableFlavor(rightValue, subcategory)
+  const leftSize = sizeSignature(leftValue)
+  const rightSize = sizeSignature(rightValue)
+  if (leftSize !== rightSize && (leftSize || rightSize)) return false
   if (left === right) return true
 
   if (numericSignature(leftValue) !== numericSignature(rightValue)) return false
@@ -119,6 +144,10 @@ function sameProductName(leftValue: string, rightValue: string, subcategory: str
 }
 
 function sameBaseFlavor(leftValue: string, rightValue: string, subcategory: string) {
+  const leftSize = sizeSignature(leftValue)
+  const rightSize = sizeSignature(rightValue)
+  if (leftSize !== rightSize && (leftSize || rightSize)) return false
+
   const left = baseFlavor(leftValue, subcategory)
   const right = baseFlavor(rightValue, subcategory)
   if (left === right) return true
