@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { getSettings } from '@/lib/settings'
 import AdminShell from '@/components/AdminShell'
+import HeroImageEditor from '@/components/HeroImageEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,9 +9,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   await requireAdmin()
   const settings = await getSettings()
   const sp = await searchParams
+  const hasHeroImage = Number(settings.heroImageChunkCount || 0) > 0
 
   return <AdminShell active="settings">
-    <div className="adminTitle"><div><span>RESTAURANT SETTINGS</span><h1>Settings</h1><p>Control payments, order methods, contact details and social links.</p></div></div>
+    <div className="adminTitle"><div><span>RESTAURANT SETTINGS</span><h1>Settings</h1><p>Control the homepage image, payments, order methods, contact details and social links.</p></div></div>
     {sp.saved && <div className="adminSuccess">Settings saved successfully.</div>}
     <form className="settingsGrid" method="post" action="/api/admin/settings">
       <section className="adminPanel">
@@ -22,6 +24,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <label>WhatsApp<input name="whatsapp" defaultValue={settings.whatsapp}/></label>
           <label>Google Maps / Location URL<input name="locationUrl" defaultValue={settings.locationUrl}/></label>
         </div>
+      </section>
+
+      <section className="adminPanel heroImageAdminPanel">
+        <div className="panelHead"><div><h2>Home hero image</h2><p>Background behind “Fresh flavors, made for your moment.”</p></div></div>
+        <HeroImageEditor initialImageUrl={hasHeroImage ? '/api/hero-image' : ''}/>
       </section>
 
       <section className="adminPanel">
