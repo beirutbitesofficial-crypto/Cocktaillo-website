@@ -21,7 +21,10 @@ export const defaultSettings: Record<string, string> = {
 export async function getSettings() {
   const rows = await db.setting.findMany()
   const merged = { ...defaultSettings }
-  for (const row of rows) merged[row.key] = row.value
+  for (const row of rows) {
+    if (row.key.startsWith('heroImageChunk:')) continue
+    merged[row.key] = row.value
+  }
   return merged
 }
 

@@ -16,9 +16,30 @@ html,body{max-width:100%;overflow-x:hidden}
 .heroPhotoFrame{position:absolute;inset:0;width:100%;max-width:none;height:100%;aspect-ratio:auto;border-radius:0;overflow:hidden;background:#e9e1d4;box-shadow:none}
 .heroPhotoFrame img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 42%}
 .heroVisual:before{display:none!important}
-.heroVisual:after{display:block!important;content:"";position:absolute;inset:0;z-index:2;border:0;border-radius:0;background:linear-gradient(90deg,rgba(247,240,229,.95) 0%,rgba(247,240,229,.87) 35%,rgba(247,240,229,.56) 58%,rgba(247,240,229,.16) 82%,rgba(247,240,229,.05) 100%)}
+.heroVisual:after{display:block!important;content:"";position:absolute;inset:0;z-index:2;border:0;border-radius:0;background:linear-gradient(90deg,rgba(247,240,229,.84) 0%,rgba(247,240,229,.76) 35%,rgba(247,240,229,.46) 58%,rgba(247,240,229,.12) 82%,rgba(247,240,229,.03) 100%)}
 .hero .eyebrow{color:#174f34}
 .heroCopy>p{color:#4f5b53}
+
+/* Admin-managed homepage hero image. */
+.heroImageAdminPanel{grid-column:1/-1}
+.heroImageAdmin{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:18px;align-items:start}
+.heroImageAdminPreview{position:relative;aspect-ratio:16/9;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--cream)}
+.heroImageAdminPreview>img{width:100%;height:100%;display:block;object-fit:cover;object-position:center}
+.heroImageAdminEmpty{position:absolute;inset:0;display:grid;place-items:center;align-content:center;text-align:center;gap:6px;padding:24px;color:var(--muted)}
+.heroImageAdminEmpty b{color:var(--ink);font-size:15px}
+.heroImageAdminEmpty span{font-size:11px;line-height:1.5;max-width:330px}
+.heroImageAdminOverlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:20px;background:linear-gradient(90deg,rgba(247,240,229,.78),rgba(247,240,229,.22) 68%,transparent)}
+.heroImageAdminOverlay span,.heroImageAdminOverlay em{font:600 clamp(22px,3.4vw,38px)/1 Georgia,serif;color:var(--ink)}
+.heroImageAdminOverlay em{font-weight:400;color:var(--green2)}
+.heroImageAdminControls{display:grid;gap:10px}
+.heroImageAdminControls>label{display:grid;gap:7px;font-size:11px;font-weight:700}
+.heroImageAdminControls input[type=file]{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px}
+.heroImageAdminControls>small{color:var(--muted);font-size:10px;line-height:1.5}
+.heroImageAdminActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.heroImageAdminActions button{border-radius:10px;padding:11px 14px;font-weight:700}
+.heroImageRemove{border:0;background:#fff0f0;color:#963535}
+.heroImageAdminActions button:disabled{opacity:.5;cursor:wait}
+.heroImageAdminStatus{min-height:18px;color:var(--muted);font-size:11px}
 
 .customizableBadge{position:absolute;right:14px;top:14px;background:var(--green);color:#fff;border-radius:99px;padding:7px 10px;font-size:10px;font-weight:800}
 .cartAddons{display:grid;gap:3px;margin-top:2px}
@@ -83,8 +104,9 @@ html,body{max-width:100%;overflow-x:hidden}
   .heroVisual{position:absolute!important;top:0;bottom:0;left:50%;width:100vw!important;transform:translateX(-50%);display:block!important}
   .heroPhotoFrame{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none}
   .heroPhotoFrame img{object-position:center top}
-  .heroVisual:after{background:linear-gradient(180deg,rgba(247,240,229,.08) 0%,rgba(247,240,229,.2) 27%,rgba(247,240,229,.68) 48%,rgba(247,240,229,.92) 66%,rgba(247,240,229,.97) 100%)}
+  .heroVisual:after{background:linear-gradient(180deg,rgba(247,240,229,.04) 0%,rgba(247,240,229,.1) 26%,rgba(247,240,229,.38) 48%,rgba(247,240,229,.76) 68%,rgba(247,240,229,.9) 100%)}
   .heroCopy{max-width:100%}
+  .heroImageAdmin{grid-template-columns:1fr}
   .menuTools{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;width:100%;overflow:hidden}
   .categories{width:100%;max-width:100%;padding-right:18px}
   .subcategories{margin-top:-4px;margin-bottom:24px}
@@ -96,6 +118,9 @@ html,body{max-width:100%;overflow-x:hidden}
   .heroGrid{min-height:820px!important;padding-top:275px!important;padding-bottom:48px!important}
   .hero h1{font-size:clamp(48px,13vw,64px);text-shadow:0 1px 0 rgba(255,255,255,.3)}
   .heroCopy>p{color:#4d5851}
+  .heroImageAdminPreview{aspect-ratio:4/5}
+  .heroImageAdminOverlay{padding:16px;background:linear-gradient(180deg,transparent 22%,rgba(247,240,229,.74) 72%,rgba(247,240,229,.9))}
+  .heroImageAdminOverlay span,.heroImageAdminOverlay em{font-size:28px}
   .menuSection{padding-top:62px}
   .sectionHeading{display:block;margin-bottom:22px}
   .sectionHeading h2{font-size:36px}

@@ -160,6 +160,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
     DELIVERY: settings.deliveryEnabled === 'true',
     TAKEAWAY: settings.takeawayEnabled === 'true'
   }
+  const heroImageUrl = Number(settings.heroImageChunkCount || 0) > 0 ? '/api/hero-image' : ''
 
   return <>
     <header className="siteHeader">
@@ -183,7 +184,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
               {enabled.TAKEAWAY && <span><PackageCheck size={16}/> Takeaway</span>}
             </div>
           </div>
-          <div className="heroVisual"><div className="heroPhotoFrame"><img src="/cocktaillo-home-hero.webp" alt="Cocktaillo Resto Café interior" /></div></div>
+          {heroImageUrl && <div className="heroVisual"><div className="heroPhotoFrame"><img src={heroImageUrl} alt="Cocktaillo Resto Café interior" /></div></div>}
         </div>
       </section>
 
