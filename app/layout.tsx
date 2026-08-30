@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import './ordering-overrides.css'
 import './responsive-overrides.css'
+import './hero-polish.css'
 
 export const metadata: Metadata = {
   title: 'Cocktaillo Resto - Café | Order Online',
