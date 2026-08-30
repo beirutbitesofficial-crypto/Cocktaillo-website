@@ -82,7 +82,11 @@ function stripSubcategoryName(value: string, subcategory: string) {
 
 function comparableFlavor(value: string, subcategory: string) {
   let name = stripSubcategoryName(value, subcategory)
-  name = name.replace(/\s+s$/, '').trim()
+  name = name
+    .replace(/\bnuttela\b/g, 'nutella')
+    .replace(/\bnutela\b/g, 'nutella')
+    .replace(/\s+s$/, '')
+    .trim()
   return flavorAliases[name] || name
 }
 
