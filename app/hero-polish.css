@@ -1,0 +1,26 @@
+/* Mobile hero readability polish: keep the photo as the background, but separate the copy from busy details. */
+@media(max-width:820px){
+  .heroGrid{min-height:860px!important;padding-top:335px!important;padding-bottom:46px!important}
+  .heroVisual:after{background:linear-gradient(180deg,rgba(247,240,229,0) 0%,rgba(247,240,229,.04) 32%,rgba(247,240,229,.16) 47%,rgba(247,240,229,.42) 64%,rgba(247,240,229,.68) 100%)!important}
+  .heroCopy{max-width:620px!important;margin:0 auto;background:rgba(247,240,229,.88);border:1px solid rgba(255,255,255,.62);border-radius:26px;padding:24px 22px 22px;box-shadow:0 18px 46px rgba(18,63,40,.14);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .hero .eyebrow{display:block;margin-bottom:15px;font-size:10px!important;line-height:1.45;letter-spacing:2.6px!important}
+  .hero h1{font-size:clamp(43px,11.8vw,56px)!important;line-height:.94!important;letter-spacing:-1.5px!important;margin:0 0 17px!important;text-shadow:none!important}
+  .heroCopy>p{margin:0 0 20px!important;color:#455149!important;font-size:15px!important;line-height:1.45!important}
+  .heroActions{gap:10px!important}
+  .heroActions .primary,.heroActions .secondary{min-height:58px!important;border-radius:999px!important}
+  .heroActions .secondary{background:rgba(255,255,255,.94)!important;color:var(--green)!important;border:1.5px solid var(--green)!important}
+  .servicePills{margin-top:16px!important;gap:8px!important}
+  .servicePills span{background:rgba(255,255,255,.94)!important;border-color:rgba(18,63,40,.16)!important;box-shadow:0 6px 18px rgba(18,63,40,.06)}
+}
+
+@media(max-width:560px){
+  .heroGrid{min-height:835px!important;padding-top:320px!important;padding-bottom:36px!important}
+  .heroCopy{border-radius:22px;padding:20px 18px 18px}
+  .hero .eyebrow{font-size:9px!important;letter-spacing:2.2px!important;margin-bottom:13px!important}
+  .hero h1{font-size:clamp(40px,12.2vw,49px)!important;line-height:.93!important;letter-spacing:-1.25px!important;margin-bottom:15px!important}
+  .heroCopy>p{font-size:14px!important;margin-bottom:17px!important}
+  .heroActions{display:grid!important;grid-template-columns:1fr!important}
+  .heroActions .primary,.heroActions .secondary{width:100%!important;min-height:55px!important}
+  .servicePills{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .servicePills span{justify-content:center!important;min-width:0!important}
+}
