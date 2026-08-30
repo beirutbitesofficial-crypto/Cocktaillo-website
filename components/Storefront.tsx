@@ -183,7 +183,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
               {enabled.TAKEAWAY && <span><PackageCheck size={16}/> Takeaway</span>}
             </div>
           </div>
-          <div className="heroVisual"><div className="logoPlate"><img src="/cocktaillo-logo.jpg" alt="Cocktaillo" /></div></div>
+          <div className="heroVisual"><div className="heroPhotoFrame"><img src="/cocktaillo-home-hero.webp" alt="Cocktaillo Resto Café interior" /></div></div>
         </div>
       </section>
 
