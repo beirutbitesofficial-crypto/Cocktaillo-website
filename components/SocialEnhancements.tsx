@@ -45,10 +45,12 @@ export default function SocialEnhancements({ instagram, whatsapp }: { instagram?
     setShowInstagram(false)
   }
 
-  const navIcons = navTarget ? createPortal(<span className="navSocialIcons">
+  if (!navTarget) return null
+
+  const navIcons = createPortal(<span className="navSocialIcons">
     {instagramUrl && <a className="navSocialIcon" href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={18}/></a>}
     {whatsappUrl && <a className="navSocialIcon" href={whatsappUrl} target="_blank" rel="noreferrer" aria-label="WhatsApp"><WhatsAppIcon size={18}/></a>}
-  </span>, navTarget) : null
+  </span>, navTarget)
 
   return <>
     {navIcons}
