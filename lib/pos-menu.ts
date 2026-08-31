@@ -35,6 +35,37 @@ export type PosMenuFeed = {
   items: PosMenuItem[]
 }
 
+export type PosWebsiteOrderPayload = {
+  external_id: string
+  type: 'delivery' | 'takeaway'
+  payment_method: 'CASH' | 'WHISH'
+  payment_reference?: string
+  delivery_fee_cents?: number
+  customer: {
+    name?: string
+    phone: string
+    address?: string
+    notes?: string
+  }
+  lines: Array<{
+    menu_item_id: string
+    quantity: number
+    addons: Array<{ id: string; quantity: number }>
+    note?: string
+  }>
+}
+
+export type PosWebsiteOrderResult = {
+  duplicate: boolean
+  order: {
+    id: string
+    number: number
+    type: string
+    status: string
+    totals?: { total_equivalent_cents?: number }
+  }
+}
+
 function stableNumericId(value: string) {
   let hash = 0x811c9dc5
   for (let i = 0; i < value.length; i++) {
@@ -80,4 +111,26 @@ export async function getPosMenu(): Promise<PosMenuFeed> {
       products: Array.isArray(category.products) ? category.products.map(normalizeItem) : []
     }))
   }
+}
+
+export async function submitWebsiteOrderToPos(payload: PosWebsiteOrderPayload): Promise<PosWebsiteOrderResult> {
+  const key = String(process.env.COCKTAILLO_WEBSITE_ORDER_KEY || '').trim()
+  if (!key) throw new Error('POS website-order integration key is not configured')
+
+  const res = await fetch(`${getPosBaseUrl()}/api/website-orders`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-cocktaillo-order-key': key
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(12000)
+  })
+
+  const raw = await res.json().catch(() => ({})) as Partial<PosWebsiteOrderResult> & { error?: string }
+  if (!res.ok) throw new Error(raw.error || `Cocktaillo POS order endpoint returned ${res.status}`)
+  if (!raw.order || !Number.isFinite(Number(raw.order.number))) throw new Error('Cocktaillo POS returned an invalid order response')
+  return raw as PosWebsiteOrderResult
 }

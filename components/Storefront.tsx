@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Instagram, Facebook, MapPin, Minus, Plus, Search, ShoppingBag, X, CheckCircle2, Bike, PackageCheck, CreditCard, Banknote, Phone } from 'lucide-react'
 
 type Addon = { id: string; name: string; nameAr: string; priceLbp: number; price: number }
@@ -10,11 +10,13 @@ type Props = { categories: Category[]; settings: Record<string, string>; addons:
 type CartItem = Product & { quantity: number; addons: Addon[]; cartKey: string }
 type OrderType = 'DELIVERY' | 'TAKEAWAY'
 type Payment = 'CASH' | 'WHISH'
+type CheckoutSuccess = { orderNumber: string; total: number; whatsappSent: boolean; whatsappUrl: string }
 
 const money = (n: number) => `$${n.toFixed(2)}`
 const lbp = (n: number) => `${Math.round(n).toLocaleString('en-US')} LBP`
 const makeCartKey = (productId: number, selected: Addon[]) => `${productId}:${selected.map(a => a.id).sort().join(',')}`
 const addonTotal = (item: Pick<CartItem, 'addons'>) => item.addons.reduce((n, addon) => n + addon.price, 0)
+const newCheckoutId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 export default function Storefront({ categories, settings, addons, exchangeRate }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
@@ -28,8 +30,9 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
   const [orderType, setOrderType] = useState<OrderType>('TAKEAWAY')
   const [payment, setPayment] = useState<Payment>('CASH')
   const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState<{ orderNumber: string; total: number } | null>(null)
+  const [success, setSuccess] = useState<CheckoutSuccess | null>(null)
   const [error, setError] = useState('')
+  const checkoutSession = useRef<{ fingerprint: string; id: string }>({ fingerprint: '', id: '' })
 
   useEffect(() => {
     const saved = localStorage.getItem('cocktaillo-cart')
@@ -126,7 +129,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
     setSubmitting(true)
     setError('')
     const fd = new FormData(e.currentTarget)
-    const payload = {
+    const basePayload = {
       type: orderType,
       paymentMethod: payment,
       customerName: String(fd.get('customerName') || ''),
@@ -136,6 +139,11 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
       paymentReference: String(fd.get('paymentReference') || ''),
       items: cart.map(i => ({ productId: i.id, quantity: i.quantity, addons: i.addons.map(addon => addon.id) }))
     }
+    const fingerprint = JSON.stringify(basePayload)
+    if (checkoutSession.current.fingerprint !== fingerprint || !checkoutSession.current.id) {
+      checkoutSession.current = { fingerprint, id: newCheckoutId() }
+    }
+    const payload = { ...basePayload, clientOrderId: checkoutSession.current.id }
 
     try {
       const res = await fetch('/api/orders', {
@@ -145,7 +153,13 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Could not place order')
-      setSuccess({ orderNumber: data.orderNumber, total: data.total })
+      setSuccess({
+        orderNumber: String(data.orderNumber),
+        total: Number(data.total || 0),
+        whatsappSent: Boolean(data.whatsappSent),
+        whatsappUrl: String(data.whatsappUrl || '')
+      })
+      checkoutSession.current = { fingerprint: '', id: '' }
       setCart([])
       setCheckoutOpen(false)
       setCartOpen(false)
@@ -233,10 +247,10 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
         <div className="checkoutSection"><label className="fieldLabel">Payment method</label><div className="paymentOptions">{settings.cashEnabled==='true' && <button type="button" className={payment==='CASH'?'selected':''} onClick={()=>setPayment('CASH')}><Banknote/><div><strong>Cash</strong><small>Pay when you receive or collect your order</small></div></button>}{settings.whishEnabled==='true' && <button type="button" className={payment==='WHISH'?'selected':''} onClick={()=>setPayment('WHISH')}><CreditCard/><div><strong>Whish Money</strong><small>Transfer to {settings.whishPhone || 'restaurant Whish number'}</small></div></button>}</div>{payment==='WHISH' && <div className="whishBox"><strong>Send your payment via Whish</strong><p>Whish number: <b>{settings.whishPhone || 'Not configured yet'}</b></p><label>Transfer reference / sender name<input name="paymentReference" placeholder="Optional reference"/></label></div>}</div>
         {error && <div className="errorBox">{error}</div>}
         <div className="checkoutTotal"><div><span>Subtotal</span><b>{money(subtotal)}</b></div>{orderType==='DELIVERY' && <div><span>Delivery fee</span><b>{money(deliveryFee)}</b></div>}<div className="grand"><span>Total</span><b>{money(total)}</b></div></div>
-        <button disabled={submitting || !cart.length} className="placeOrder">{submitting ? 'Placing order...' : `Place order • ${money(total)}`}</button>
+        <button disabled={submitting || !cart.length} className="placeOrder">{submitting ? 'Sending to Cocktaillo POS...' : `Place order • ${money(total)}`}</button>
       </form>
     </div></div>}
 
-    {success && <div className="modalOverlay"><div className="successModal"><CheckCircle2/><span>ORDER RECEIVED</span><h2>Thank you!</h2><p>Your order <strong>#{success.orderNumber}</strong> has been sent to Cocktaillo.</p><div className="successTotal"><span>Total</span><strong>{money(success.total)}</strong></div><button className="primary" onClick={()=>setSuccess(null)}>Done</button></div></div>}
+    {success && <div className="modalOverlay"><div className="successModal"><CheckCircle2/><span>ORDER RECEIVED</span><h2>Thank you!</h2><p>Your order <strong>#{success.orderNumber}</strong> is now inside the Cocktaillo POS.</p>{success.whatsappSent && <p style={{marginTop:8}}>WhatsApp notification sent successfully.</p>}<div className="successTotal"><span>Total</span><strong>{money(success.total)}</strong></div>{!success.whatsappSent && success.whatsappUrl && <button className="primary" onClick={()=>window.open(success.whatsappUrl,'_blank','noopener,noreferrer')}>Send order on WhatsApp</button>}<button className="primary" style={{marginTop:10}} onClick={()=>setSuccess(null)}>Done</button></div></div>}
   </>
 }
