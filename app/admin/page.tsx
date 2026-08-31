@@ -5,14 +5,32 @@ import { ClipboardList, DollarSign, ShoppingBag, Clock3 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+const DASHBOARD_RESET_KEY = 'adminOrdersDashboardResetAt'
+
+async function getDashboardResetAt() {
+  const existing = await db.setting.findUnique({ where: { key: DASHBOARD_RESET_KEY } })
+  if (existing?.value) return new Date(existing.value)
+
+  const now = new Date()
+  const saved = await db.setting.upsert({
+    where: { key: DASHBOARD_RESET_KEY },
+    update: {},
+    create: { key: DASHBOARD_RESET_KEY, value: now.toISOString() }
+  })
+  return new Date(saved.value)
+}
+
 export default async function AdminDashboard() {
   await requireAdmin()
+  const dashboardResetAt = await getDashboardResetAt()
+  const sinceReset = { createdAt: { gte: dashboardResetAt } }
+
   const [totalOrders, openOrders, products, revenue, recent] = await Promise.all([
-    db.order.count(),
-    db.order.count({ where: { status: { in: ['NEW', 'CONFIRMED', 'PREPARING', 'READY'] } } }),
+    db.order.count({ where: sinceReset }),
+    db.order.count({ where: { ...sinceReset, status: { in: ['NEW', 'CONFIRMED', 'PREPARING', 'READY'] } } }),
     db.product.count(),
-    db.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
-    db.order.findMany({ orderBy: { createdAt: 'desc' }, take: 8, include: { items: true } })
+    db.order.aggregate({ _sum: { total: true }, where: { ...sinceReset, status: { not: 'CANCELLED' } } }),
+    db.order.findMany({ where: sinceReset, orderBy: { createdAt: 'desc' }, take: 8, include: { items: true } })
   ])
 
   return <AdminShell active="dashboard">
@@ -24,7 +42,7 @@ export default async function AdminDashboard() {
       <Stat icon={<DollarSign/>} label="Order value" value={`$${(revenue._sum.total || 0).toFixed(2)}`}/>
     </div>
     <section className="adminPanel">
-      <div className="panelHead"><div><h2>Recent orders</h2><p>Newest customer orders</p></div><a href="/admin/orders">View all</a></div>
+      <div className="panelHead"><div><h2>Recent orders</h2><p>Newest customer orders since the dashboard reset</p></div><a href="/admin/orders">View all</a></div>
       <div className="tableWrap"><table><thead><tr><th>Order</th><th>Type</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>{recent.map(o => <tr key={o.id}><td><b>#{o.orderNumber}</b><small>{o.createdAt.toLocaleString()}</small></td><td>{o.type.replace('_', ' ')}</td><td>{o.customerName || 'Guest'}</td><td>{o.items.reduce((n, i) => n + i.quantity, 0)}</td><td><b>${o.total.toFixed(2)}</b></td><td><span className={`status s-${o.status.toLowerCase()}`}>{o.status}</span></td></tr>)}</tbody></table>{!recent.length && <div className="adminEmpty">No orders yet.</div>}</div>
     </section>
   </AdminShell>
