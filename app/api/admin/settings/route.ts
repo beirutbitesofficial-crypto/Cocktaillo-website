@@ -11,5 +11,11 @@ export async function POST(req: Request) {
     const value = isBool ? (fd.get(key) === 'on' ? 'true' : 'false') : String(fd.get(key) || '')
     await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } })
   }
-  return NextResponse.redirect(new URL('/admin/settings?saved=1', req.url), 303)
+
+  // Use a relative Location header instead of req.url. Behind Hostinger's proxy,
+  // req.url can contain the internal 0.0.0.0 origin, which Safari refuses to open.
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: '/admin/settings?saved=1' }
+  })
 }
