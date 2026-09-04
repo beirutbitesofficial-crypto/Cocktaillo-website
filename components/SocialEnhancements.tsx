@@ -28,7 +28,7 @@ export default function SocialEnhancements({ instagram, whatsapp }: { instagram?
   const instagramUrl = String(instagram || '').trim()
 
   useEffect(() => {
-    setNavTarget(document.querySelector('.siteHeader nav'))
+    setNavTarget(document.querySelector<HTMLElement>('.siteHeader nav'))
   }, [])
 
   useEffect(() => {
