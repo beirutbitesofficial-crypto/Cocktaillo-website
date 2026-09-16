@@ -39,6 +39,8 @@ A production-ready restaurant ordering website and admin dashboard for Cocktaill
 
 Use Node.js 22+ and a Hostinger MySQL database. The database is external to the application build, so orders, menu settings and customer order data remain persistent across app redeployments.
 
+Hostinger builds this project with Webpack via `npm run build` to avoid Turbopack native SWC / GLIBC compatibility issues on the hosting environment.
+
 `npm start` runs `prisma db push`, seeds missing defaults/menu data, and then starts Next.js.
 
 Recommended environment variables:
