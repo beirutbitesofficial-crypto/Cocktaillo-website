@@ -9,9 +9,34 @@ const FOLLOW_KEY = 'cocktaillo-instagram-follow-v1'
 function normalizeWhatsApp(value: string) {
   const raw = String(value || '').trim()
   if (!raw) return ''
-  if (/^https?:\/\//i.test(raw)) return raw
-  const digits = raw.replace(/\D/g, '')
+
+  let candidate = raw
+
+  // Support values saved either as a plain phone number or as a WhatsApp URL.
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw)
+      const host = url.hostname.toLowerCase().replace(/^www\./, '')
+
+      if (host === 'wa.me') {
+        candidate = url.pathname.split('/').filter(Boolean)[0] || ''
+      } else if (host.endsWith('whatsapp.com')) {
+        candidate = url.searchParams.get('phone') || url.pathname || ''
+      }
+    } catch {
+      candidate = raw
+    }
+  }
+
+  let digits = candidate.replace(/\D/g, '')
   if (!digits) return ''
+
+  // WhatsApp expects an international number with country code only:
+  // no + sign, no leading 00 and no Lebanese local trunk 0.
+  while (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.startsWith('0')) digits = `961${digits.slice(1)}`
+  else if (digits.length === 8) digits = `961${digits}`
+
   return `https://wa.me/${digits}`
 }
 
