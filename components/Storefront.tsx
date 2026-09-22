@@ -11,6 +11,7 @@ type CartItem = Product & { quantity: number; addons: Addon[]; cartKey: string }
 type OrderType = 'DELIVERY' | 'TAKEAWAY'
 type Payment = 'CASH' | 'WHISH'
 type CheckoutSuccess = { orderNumber: string; total: number; whatsappSent: boolean; whatsappUrl: string }
+type ImagePreview = { src: string; alt: string }
 
 const money = (n: number) => `$${n.toFixed(2)}`
 const lbp = (n: number) => `${Math.round(n).toLocaleString('en-US')} LBP`
@@ -26,6 +27,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [customizing, setCustomizing] = useState<Product | null>(null)
+  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null)
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([])
   const [orderType, setOrderType] = useState<OrderType>('TAKEAWAY')
   const [payment, setPayment] = useState<Payment>('CASH')
@@ -56,6 +58,20 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
   useEffect(() => {
     localStorage.setItem('cocktaillo-cart', JSON.stringify(cart))
   }, [cart])
+
+  useEffect(() => {
+    if (!imagePreview) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setImagePreview(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [imagePreview])
 
   const selectedCategory = useMemo(
     () => categories.find(c => String(c.id) === category) || null,
@@ -219,7 +235,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
             {subcategories.map(name => <button key={name} className={subcategory === name ? 'active' : ''} onClick={() => setSubcategory(name)}>{name}</button>)}
           </div>}
           {products.length ? <div className="productGrid">{products.map(p => <article className="productCard" key={p.id}>
-            <div className="productImage">{p.imageUrl ? <img src={p.imageUrl} alt={p.name}/> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
+            <div className="productImage">{p.imageUrl ? <button type="button" className="productImageButton" onClick={() => setImagePreview({ src: String(p.imageUrl), alt: p.name })} aria-label={`View ${p.name} image larger`}><img src={p.imageUrl} alt={p.name}/></button> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
             <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> {p.allowAddons && addons.length ? 'Customize' : 'Add'}</button></div></div>
           </article>)}</div> : <div className="emptyState">No menu items match your search.</div>}
         </div>
@@ -229,6 +245,8 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
     </main>
 
     <footer id="contact"><div className="container footerGrid"><div className="footerBrand"><img src="/cocktaillo-logo.jpg" alt="Cocktaillo"/><p>{settings.restaurantName}</p></div><div><strong>Quick links</strong><a href="#menu">Menu</a><a href="#order">Order options</a></div><div><strong>Connect</strong>{settings.phone && <a href={`tel:${settings.phone}`}><Phone size={15}/>{settings.phone}</a>}{settings.instagram && <a target="_blank" rel="noreferrer" href={settings.instagram}><Instagram size={15}/>Instagram</a>}{settings.facebook && <a target="_blank" rel="noreferrer" href={settings.facebook}><Facebook size={15}/>Facebook</a>}{settings.tiktok && <a target="_blank" rel="noreferrer" href={settings.tiktok}>TikTok</a>}{settings.locationUrl && <a target="_blank" rel="noreferrer" href={settings.locationUrl}><MapPin size={15}/>Location</a>}</div></div><div className="copyright">© {new Date().getFullYear()} Cocktaillo Resto - Café</div></footer>
+
+    {imagePreview && <div className="imageLightbox" role="dialog" aria-modal="true" aria-label={`${imagePreview.alt} image preview`} onMouseDown={e => e.target === e.currentTarget && setImagePreview(null)}><button type="button" className="imageLightboxClose" aria-label="Close image preview" onClick={() => setImagePreview(null)}><X size={24}/></button><div className="imageLightboxContent"><img src={imagePreview.src} alt={imagePreview.alt}/></div></div>}
 
     {cartOpen && <div className="drawerOverlay" onMouseDown={e => e.target === e.currentTarget && setCartOpen(false)}><aside className="cartDrawer"><div className="drawerHead"><div><small>YOUR ORDER</small><h2>Cart <span>({count})</span></h2></div><button onClick={() => setCartOpen(false)}><X/></button></div>
       <div className="cartItems">{cart.length ? cart.map(i => <div className="cartItem" key={i.cartKey}><div className="cartThumb">{i.imageUrl ? <img src={i.imageUrl} alt={i.name}/> : <span>C</span>}</div><div className="cartText"><strong>{i.name}</strong><small>{money(i.price + addonTotal(i))}</small>{i.addons.length > 0 && <div className="cartAddons">{i.addons.map(addon => <span key={addon.id}>+ {addon.name} {money(addon.price)}</span>)}</div>}<div className="qty"><button onClick={() => change(i.cartKey,-1)}><Minus size={14}/></button><span>{i.quantity}</span><button onClick={() => change(i.cartKey,1)}><Plus size={14}/></button></div></div><strong>{money((i.price + addonTotal(i))*i.quantity)}</strong></div>) : <div className="emptyCart"><ShoppingBag/><h3>Your cart is empty</h3><p>Add something delicious from the menu.</p></div>}</div>
