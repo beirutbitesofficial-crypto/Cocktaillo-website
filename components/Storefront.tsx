@@ -94,8 +94,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
       const matchSubcategory = subcategory === 'all' || p.subcategory === subcategory
       const matchQuery = !query || `${p.name} ${p.description || ''} ${p.subcategory}`.toLowerCase().includes(query.toLowerCase())
       return matchCat && matchSubcategory && matchQuery
-    })
-    .sort((a,b) => Number(b.featured) - Number(a.featured)), [categories, category, subcategory, query])
+    }), [categories, category, subcategory, query])
 
   const count = cart.reduce((n, i) => n + i.quantity, 0)
   const subtotal = cart.reduce((n, i) => n + (i.price + addonTotal(i)) * i.quantity, 0)

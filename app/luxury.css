@@ -246,6 +246,7 @@ body .primary:active,body .secondary:active,.cartButton:active,.productBottom bu
   body .heroCopy:after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:luxSheen 7s ease-in-out 1.6s infinite}
   body .heroCopy>*{position:relative;z-index:1}
   body .heroCopy .heroActions{margin-bottom:0!important}
+  body .heroPhotoFrame img{translate:0 -11%}
   body .hero h1,body .heroCopy>p,body .hero .eyebrow{text-shadow:0 2px 18px rgba(0,0,0,.45)!important}
   body .hero .eyebrow{color:var(--lux-gold-soft)!important}
   body .hero h1{font-size:clamp(46px,12.5vw,62px)!important;letter-spacing:-1px!important;text-shadow:none!important}
