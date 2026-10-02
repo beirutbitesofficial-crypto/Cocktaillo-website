@@ -3,6 +3,7 @@ import { getSettings } from '@/lib/settings'
 import { getPosMenu, posCategoryId, posProductId } from '@/lib/pos-menu'
 import { menuMediaKey, parseMenuMedia } from '@/lib/menu-media'
 import { defaultMenuDescription } from '@/lib/menu-descriptions'
+import { brandedMenuPhoto } from '@/lib/menu-photos'
 import Storefront from '@/components/Storefront'
 
 export const dynamic = 'force-dynamic'
@@ -252,7 +253,7 @@ export default async function Home() {
         name: product.name,
         description: (savedMedia ? savedMedia.description : legacyMeta?.description) || defaultMenuDescription(product.name),
         price: product.price,
-        imageUrl: savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null,
+        imageUrl: brandedMenuPhoto(savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null),
         featured: product.best_seller,
         allowAddons: product.allow_addons,
         subcategory: resolvedSubcategory
