@@ -231,6 +231,53 @@ const sharedPhotos: Record<string, string> = {
   'waffle marshmallow': 'f18a6025b80f11b250cd', // Waffle - Marshmallow
   'crab salad': 'stock-crab-salad', // Crab Salad
   'plate browni': 'stock-brownie', // plate browni
+  '7up': 'stock-lemon-soda', // 7UP
+  '7up can': 'stock-lemon-soda', // 7UP - Can
+  'add': '2de13694343c1c728516', // add
+  'add fliver': '3a66df229f676041d7d6', // add fliver
+  'add fruit': 'd42b1908adbb6555aaa7', // add fruit
+  'avocado extra l': 'a8ff1e0b0492b08f0ee8', // avocado extra / L
+  'avocado extra m': 'a8ff1e0b0492b08f0ee8', // avocado extra / M
+  'bottle juices': 'da5bc0da3dcbc9719abc', // Bottle juices
+  'cocktail': '459e3e159c448d9e82f4', // Cocktail
+  'cold beverage frappe': '9bac85ae4c27987cb58d', // Cold Beverage > Frappe
+  'cold beverage fresh juices': '2c235de07d8ce7069a2d', // Cold Beverage > Fresh Juices
+  'cold beverage iced coffee': '2f8ec9b258de369b5b98', // Cold Beverage > Iced Coffee
+  'cold beverage mocktaillo': '765b8dfa0bf570684896', // Cold Beverage > Mocktaillo
+  'cold beverage mojito': 'd1a894d3e115f3b798f4', // Cold Beverage > Mojito
+  'cold beverage shakes': '9c088d9378ba07bb9a5e', // Cold Beverage > Shakes
+  'cold beverage soft drinks': 'stock-cola', // Cold Beverage > Soft Drinks
+  'dessert': '9338b16dff5e2e13abff', // Dessert / حلويات
+  'dessert cold dessert': '2f8429b1389cfc6ffa04', // Dessert > Cold Dessert
+  'dessert crepe': '52b8779099835b87bd5a', // Dessert > Crepe
+  'dessert ice cream merry cream': 'ice-cream-display', // Dessert > Ice Cream & Merry Cream
+  'dessert pancake': '92dde2d4a65e5ad94d71', // Dessert > Pancake
+  'dessert waffle': '2102096e6dcb545ee984', // Dessert > Waffle
+  'diet 7up': 'stock-lemon-soda', // Diet 7UP
+  'diet 7up can': 'stock-lemon-soda', // Diet 7UP - Can
+  'diet pepsi': 'stock-cola', // Diet Pepsi
+  'diet pepsi can': 'stock-cola', // Diet Pepsi - Can
+  'extra': 'dca065c0d1cb2cd27d59', // Extra
+  'fiche': '2f8429b1389cfc6ffa04', // fiche
+  'fresco fresh l': 'd42b1908adbb6555aaa7', // fresco fresh L
+  'fresco fresh m': 'd42b1908adbb6555aaa7', // fresco fresh M
+  'head change': 'stock-f-hookah', // Head Change
+  'hookah': 'stock-f-hookah', // Hookah
+  'hot beverage': '093417e3ec3abd3594ef', // Hot Beverage
+  'knafeh': 'stock-knafeh', // Knafeh
+  'large water': 'stock-water', // Large Water
+  'large water large': 'stock-water', // Large Water - Large
+  'mirinda': 'stock-orange-soda', // Mirinda
+  'mirinda can': 'stock-orange-soda', // Mirinda - Can
+  'pepsi': 'stock-cola', // Pepsi
+  'pepsi can': 'stock-cola', // Pepsi - Can
+  'pepsi l': 'stock-cola', // pepsi L
+  'reservation': 'stock-f-hookah', // Reservation
+  'salads': 'stock-caesar', // Salads
+  'serves': '2b6129e74a5f5a2ed736', // serves
+  'small water': 'stock-water', // Small Water
+  'small water small': 'stock-water', // Small Water - Small
+  'turki': '3a66df229f676041d7d6', // turki
 }
 
 const nameKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
