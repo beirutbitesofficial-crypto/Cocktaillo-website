@@ -253,7 +253,7 @@ export default async function Home() {
         name: product.name,
         description: (savedMedia ? savedMedia.description : legacyMeta?.description) || defaultMenuDescription(product.name),
         price: product.price,
-        imageUrl: brandedMenuPhoto(savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null, product.name),
+        imageUrl: brandedMenuPhoto(savedMedia ? savedMedia.imageUrl || null : legacyMeta?.imageUrl || null, product.name, resolvedSubcategory),
         featured: product.best_seller,
         allowAddons: product.allow_addons,
         subcategory: resolvedSubcategory

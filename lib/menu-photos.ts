@@ -169,13 +169,75 @@ const sharedPhotos: Record<string, string> = {
   'watermelon medium': 'stock-watermelon-juice', // Watermelon - Medium
   'wedges': 'stock-wedges', // Wedges
   'zinger': 'stock-crispy-sandwich', // Zinger
+  'banana milk large': 'stock-banana-milk2', // Banana & Milk - Large
+  'banana milk medium': 'stock-banana-milk2', // Banana & Milk - Medium
+  'blue strawberry': 'd1a894d3e115f3b798f4', // Blue Strawberry
+  'blueberry': 'd1a894d3e115f3b798f4', // Blueberry
+  'brownies crepe': '2de13694343c1c728516', // brownies crepe
+  'brownies waffle': '9338b16dff5e2e13abff', // brownies waffle
+  'cake l': 'bec753e7508acffbd17e', // cake L
+  'cake m': 'bec753e7508acffbd17e', // cake M
+  'cake s': 'bec753e7508acffbd17e', // cake s
+  'cerelac': 'stock-banana-milk2', // Cerelac
+  'cheese balls 6 pcs': '8533341f2abe2353dcd7', // Cheese Balls (6 pcs)
+  'chicken breast plate': 'stock-chicken-plate2', // Chicken Breast Plate
+  'chicken mushroom plate': 'stock-chicken-plate2', // Chicken Mushroom Plate
+  'chocolate mousse': '1abb8c4a3bcb01858795', // Chocolate Mousse
+  'chocolate nutella': '9c088d9378ba07bb9a5e', // Chocolate nutella
+  'coconut': 'stock-coconut', // Coconut
+  'crepe marshmallow': '322ea94dced8187ce2dc', // Crepe - Marshmallow
+  'crepe oreo': '91081cda918e29ea6cac', // Crepe - Oreo
+  'fettuccine alfredo': 'stock-fettuccine-chicken', // Fettuccine Alfredo
+  'fettuccine alfredo chicken': 'stock-fettuccine-chicken', // Fettuccine Alfredo Chicken
+  'frappe|mocha': '569492bcd7cdf6fc75fc', // Frappe / Mocha
+  'frappe|vanilla': 'stock-banana-milk2', // Frappe / Vanilla
+  'french fries': 'stock-fries', // French Fries
+  'grape mint': 'stock-f-hookah', // Grape & Mint
+  'crepe|grape': 'stock-f-hookah', // Hookah: grape
+  'hot beverage|mocha': '377b7c548f652905f3b0', // Hot Beverage / Mocha
+  'laguna': 'd1a894d3e115f3b798f4', // Laguna
+  'lemon mint': 'stock-f-hookah', // Lemon & Mint
+  'love': 'stock-f-hookah', // Love
+  'melon large': '7e68ffe4614bd39664be', // Melon - Large
+  'melon medium': '7e68ffe4614bd39664be', // Melon - Medium
+  'merry cream': 'ice-cream-display', // Merry Cream
+  'moghli': '3a66df229f676041d7d6', // Moghli
+  'nuttela': '9c088d9378ba07bb9a5e', // nuttela
+  'onion rings 8 pcs': '8533341f2abe2353dcd7', // Onion Rings (8 pcs)
+  'pancake 12 pcs kinder': 'e927968506715ddd2d69', // Pancake 12 pcs - Kinder
+  'pancake 12 pcs marshmallow': 'e927968506715ddd2d69', // Pancake 12 pcs - Marshmallow
+  'pancake 12 pcs oreo': 'e927968506715ddd2d69', // Pancake 12 pcs - Oreo
+  'pancake 12 pcs white chocolate': 'e927968506715ddd2d69', // Pancake 12 pcs - White Chocolate
+  'pancake 6 pcs kinder': 'e927968506715ddd2d69', // Pancake 6 pcs - Kinder
+  'pancake 6 pcs marshmallow': 'e927968506715ddd2d69', // Pancake 6 pcs - Marshmallow
+  'pancake 6 pcs oreo': 'e927968506715ddd2d69', // Pancake 6 pcs - Oreo
+  'pancake 6 pcs white chocolate': 'e927968506715ddd2d69', // Pancake 6 pcs - White Chocolate
+  'passion': 'stock-passion-mojito2', // Passion
+  'pomegranate large': '514d577d79ab33b4becc', // Pomegranate - Large
+  'pomegranate medium': '514d577d79ab33b4becc', // Pomegranate - Medium
+  'rice pudding': '3a66df229f676041d7d6', // Rice Pudding
+  'roll crepe': 'a6581126e3c00971f1c7', // Roll Crepe
+  'rosereta': 'stock-red-drink', // Rosereta
+  'shakes|lotus': '97e339d4a5e87ba5d489', // Shakes / Lotus
+  'shakes|oreo': '9c088d9378ba07bb9a5e', // Shakes / Oreo
+  'strawberry milk large': '7bc120538f8bf2dfed14', // Strawberry & Milk - Large
+  'strawberry milk medium': '7bc120538f8bf2dfed14', // Strawberry & Milk - Medium
+  'tropical large': '3f81ef021abb5683f8c3', // Tropical - Large
+  'tropical medium': '3f81ef021abb5683f8c3', // Tropical - Medium
+  'tropicana': '765b8dfa0bf570684896', // Tropicana
+  'two apples fakher': 'stock-f-hookah', // Two Apples - Fakher
+  'two apples mix': 'stock-f-hookah', // Two Apples - Mix
+  'two apples nakhla': 'stock-f-hookah', // Two Apples - Nakhla
+  'waffle marshmallow': 'f18a6025b80f11b250cd', // Waffle - Marshmallow
+  'crab salad': 'stock-crab-salad', // Crab Salad
+  'plate browni': 'stock-brownie', // plate browni
 }
 
 const nameKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
-export function brandedMenuPhoto(imageUrl: string | null, name = '') {
+export function brandedMenuPhoto(imageUrl: string | null, name = '', subcategory = '') {
   if (!imageUrl) {
-    const shared = sharedPhotos[nameKey(name)]
+    const shared = sharedPhotos[`${nameKey(subcategory)}|${nameKey(name)}`] || sharedPhotos[nameKey(name)]
     return shared ? `/menu-photos/${shared}.jpg` : null
   }
   const fingerprint = createHash('sha256').update(imageUrl).digest('hex').slice(0, 20)
