@@ -74,8 +74,110 @@ const editedPhotos = new Set([
   'f18a6025b80f11b250cd', // Waffle - White Chocolate
 ])
 
-export function brandedMenuPhoto(imageUrl: string | null) {
-  if (!imageUrl) return null
+// Items without their own upload: a size or close flavour of a Cocktaillo photo, or a
+// public-domain placeholder (see /public/menu-photos/CREDITS.txt). Any admin upload wins.
+const sharedPhotos: Record<string, string> = {
+  'anise': 'stock-tea', // Anise
+  'apple l': 'd032ddad6535467e744a', // Apple L
+  'apple large': 'd032ddad6535467e744a', // Apple - Large
+  'apple m': 'd032ddad6535467e744a', // Apple M
+  'avocado strawberry banana large': 'fcc1893a282fe63e7328', // Avocado Strawberry & Banana - Large
+  'avocado strawberry banana medium': 'a8ff1e0b0492b08f0ee8', // Avocado Strawberry & Banana - Medium
+  'beef mozzarella': 'stock-beef-burger', // Beef Mozzarella
+  'caesar salad': 'stock-caesar', // Caesar Salad
+  'carrot l': '432a8c7b29c1213577b9', // Carrot L
+  'carrot large': '432a8c7b29c1213577b9', // Carrot - Large
+  'carrot m': '432a8c7b29c1213577b9', // Carrot M
+  'chamomile': 'stock-tea', // Chamomile
+  'chicken caesar salad': 'stock-caesar', // Chicken Caesar Salad
+  'chicken mozzarella': 'stock-crispy-sandwich', // Chicken Mozzarella
+  'chicken sub': 'stock-fajita-wrap2', // Chicken Sub
+  'classic': 'stock-mojito', // Classic
+  'cocktaillo burger': 'stock-crispy-sandwich', // Cocktaillo Burger
+  'cocktaillo pasta': 'stock-pink-pasta2', // Cocktaillo Pasta
+  'coctail m': 'da5bc0da3dcbc9719abc', // Coctail M
+  'crepe belgian chocolate': '2de13694343c1c728516', // Crepe - Belgian Chocolate
+  'crepe dark chocolate': '2de13694343c1c728516', // Crepe - Dark Chocolate
+  'crepe ferrero': '52b8779099835b87bd5a', // Crepe - Ferrero
+  'crispy': 'stock-fajita-wrap2', // Crispy
+  'crispy plate': 'stock-tenders', // Crispy Plate
+  'cup fruit slide l': '8ff6cd391e58d6081703', // Cup fruit slide L
+  'cup fruit slide m': 'dca065c0d1cb2cd27d59', // Cup fruit slide M
+  'curly fries': 'stock-curly-fries', // Curly Fries
+  'double espresso': 'd9467276ea3dfd96f743', // Double Espresso
+  'energy red': 'stock-red-drink', // Energy Red
+  'fahita': 'stock-fajita-wrap2', // Fahita
+  'frappuccino': '9bac85ae4c27987cb58d', // Frappuccino
+  'fruit salad with cream honey nuts': 'd42b1908adbb6555aaa7', // Fruit Salad with Cream, Honey & Nuts
+  'fruit salad with nuts': 'd42b1908adbb6555aaa7', // Fruit Salad with Nuts
+  'fruite salad l': 'd42b1908adbb6555aaa7', // fruite salad L
+  'green energy': 'stock-pistachio-shake2', // Green Energy
+  'green tea': 'stock-tea', // Green Tea
+  'herbal tea': 'stock-tea', // Herbal Tea
+  'ice cream 1 2 kg': 'ice-cream-display', // Ice Cream 1/2 kg
+  'ice cream 1 kg': 'ice-cream-display', // Ice Cream 1 kg
+  'iced caramel': '2f8ec9b258de369b5b98', // Iced Caramel
+  'iced latte': '2f8ec9b258de369b5b98', // Iced Latte
+  'iced spanish latte': '2f8ec9b258de369b5b98', // Iced Spanish Latte
+  'latte': '5b15f3f9247045bd3732', // Latte
+  'lebanese burger': 'stock-beef-burger', // Lebanese Burger
+  'lemonade l': '70d28ba73459ef74526e', // Lemonade L
+  'lemonade large': '70d28ba73459ef74526e', // Lemonade - Large
+  'lemonade m': '70d28ba73459ef74526e', // Lemonade M
+  'lotus s': '8a0735e76c6a41294aaf', // Lotus’s
+  'lungo': 'b153c22c60f6a21307fe', // Lungo
+  'macchiato': 'stock-macchiato', // Macchiato
+  'mango l': '7e68ffe4614bd39664be', // Mango L
+  'mango large': '7e68ffe4614bd39664be', // Mango - Large
+  'mango m': '7e68ffe4614bd39664be', // Mango M
+  'minted lemonade large': '700eea67d144f00d2582', // Minted Lemonade - Large
+  'minted lemone l': '700eea67d144f00d2582', // minted lemone l
+  'minted lemoned m': '700eea67d144f00d2582', // minted lemoned m
+  'mozzarella sticks 4 pcs': 'stock-mozzarella-sticks', // Mozzarella Sticks (4 pcs)
+  'orange l': '2c235de07d8ce7069a2d', // Orange L
+  'orange m': '2c235de07d8ce7069a2d', // Orange M
+  'pancake 12 pcs belgian chocolate': 'f81602e338d5b6ddb929', // Pancake 12 pcs - Belgian Chocolate
+  'pancake 12 pcs dark chocolate': 'f81602e338d5b6ddb929', // Pancake 12 pcs - Dark Chocolate
+  'pancake 12 pcs ferrero': 'f81602e338d5b6ddb929', // Pancake 12 pcs - Ferrero
+  'pancake 12 pcs nutella': 'f81602e338d5b6ddb929', // Pancake 12 pcs - Nutella
+  'pancake 12 pcs pistachio': '1ed15ece861f7e527b03', // Pancake 12 pcs - Pistachio
+  'pancake 6 pcs belgian chocolate': '7db692cefa74c7d1ac32', // Pancake 6 pcs - Belgian Chocolate
+  'pancake 6 pcs dark chocolate': '7db692cefa74c7d1ac32', // Pancake 6 pcs - Dark Chocolate
+  'pancake 6 pcs ferrero': '8dfd0267c961c223ae75', // Pancake 6 pcs - Ferrero
+  'pineapple large': '3f81ef021abb5683f8c3', // Pineapple - Large
+  'pistachio': 'stock-pistachio-shake2', // Pistachio
+  'plate fruits': 'd42b1908adbb6555aaa7', // Plate fruits
+  'pomegranate': 'stock-red-drink', // Pomegranate
+  'red house': 'stock-red-drink', // Red House
+  'ristretto': 'd9467276ea3dfd96f743', // Ristretto
+  'royal berry': 'stock-red-drink', // Royal Berry
+  'smashed burger': 'stock-smash-burger2', // Smashed Burger
+  'sparkling water bottle bottle': '5874ee119e29c8bec4d1', // Sparkling Water Bottle - Bottle
+  'sparkling water regular': '8dca512aaf870ebee6e1', // Sparkling Water - Regular
+  'spicy fahita': 'stock-fajita-wrap2', // Spicy Fahita
+  'strawberry banana medium': '6e65b134c6daa5a7ee2b', // Strawberry & Banana - Medium
+  'strawberry l': '514d577d79ab33b4becc', // Strawberry L
+  'strawberry m': '514d577d79ab33b4becc', // Strawberry M
+  'swiss mushroom burger': 'stock-smash-burger2', // Swiss Mushroom Burger
+  'tea': 'stock-tea', // Tea
+  'twister': 'stock-fajita-wrap2', // Twister
+  'vanilla latte': '5b15f3f9247045bd3732', // Vanilla Latte
+  'waffle belgian chocolate': '9338b16dff5e2e13abff', // Waffle - Belgian Chocolate
+  'waffle dark chocolate': '9338b16dff5e2e13abff', // Waffle - Dark Chocolate
+  'waffle ferrero': 'ad48ec1b09f1c082ac9c', // Waffle - Ferrero
+  'watermelon large': 'stock-watermelon-juice', // Watermelon - Large
+  'watermelon medium': 'stock-watermelon-juice', // Watermelon - Medium
+  'wedges': 'stock-wedges', // Wedges
+  'zinger': 'stock-crispy-sandwich', // Zinger
+}
+
+const nameKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+export function brandedMenuPhoto(imageUrl: string | null, name = '') {
+  if (!imageUrl) {
+    const shared = sharedPhotos[nameKey(name)]
+    return shared ? `/menu-photos/${shared}.jpg` : null
+  }
   const fingerprint = createHash('sha256').update(imageUrl).digest('hex').slice(0, 20)
   return editedPhotos.has(fingerprint) ? `/menu-photos/${fingerprint}.jpg` : imageUrl
 }
