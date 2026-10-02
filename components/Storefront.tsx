@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import MenuItemIcon from '@/components/MenuItemIcon'
 import { Instagram, Facebook, MapPin, Minus, Plus, Search, ShoppingBag, X, CheckCircle2, Bike, PackageCheck, CreditCard, Banknote, Phone } from 'lucide-react'
 
 type Addon = { id: string; name: string; nameAr: string; priceLbp: number; price: number }
@@ -234,7 +235,7 @@ export default function Storefront({ categories, settings, addons, exchangeRate 
             {subcategories.map(name => <button key={name} className={subcategory === name ? 'active' : ''} onClick={() => setSubcategory(name)}>{name}</button>)}
           </div>}
           {products.length ? <div className="productGrid">{products.map(p => <article className="productCard" key={p.id}>
-            <div className="productImage">{p.imageUrl ? <button type="button" className="productImageButton" onClick={() => setImagePreview({ src: String(p.imageUrl), alt: p.name })} aria-label={`View ${p.name} image larger`}><img src={p.imageUrl} alt={p.name}/></button> : <div className="imageFallback"><span>C</span></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
+            <div className="productImage">{p.imageUrl ? <button type="button" className="productImageButton" onClick={() => setImagePreview({ src: String(p.imageUrl), alt: p.name })} aria-label={`View ${p.name} image larger`}><img src={p.imageUrl} alt={p.name}/></button> : <div className="imageFallback"><MenuItemIcon name={p.name} category={p.categoryName} subcategory={p.subcategory}/></div>}{p.featured && <span className="featured">Best Seller</span>}{p.allowAddons && addons.length > 0 && <span className="customizableBadge">Customizable</span>}</div>
             <div className="productInfo"><div><h3>{p.name}</h3><p>{p.description || 'Prepared fresh by Cocktaillo.'}</p></div><div className="productBottom"><strong>{money(p.price)}</strong><button onClick={() => add(p)}><Plus size={17}/> {p.allowAddons && addons.length ? 'Customize' : 'Add'}</button></div></div>
           </article>)}</div> : <div className="emptyState">No menu items match your search.</div>}
         </div>
